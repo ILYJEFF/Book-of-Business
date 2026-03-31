@@ -75,12 +75,14 @@ export default function IndustriesView(): React.ReactElement {
     if (!draft?.name?.trim()) return
     setSaving(true)
     try {
-      const saved = await window.book.saveIndustry({
-        ...draft,
+      const parentTrimmed = draft.parentId?.trim()
+      const payload: Partial<Industry> & { name: string } = {
         name: draft.name.trim(),
         description: draft.description?.trim() || undefined,
-        parentId: draft.parentId?.trim() || undefined
-      })
+        parentId: parentTrimmed || undefined
+      }
+      if (draft.id) payload.id = draft.id
+      const saved = await window.book.saveIndustry(payload)
       await refresh()
       setSelectedId(saved.id)
       setDraft({ ...saved })

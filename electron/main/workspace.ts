@@ -73,6 +73,44 @@ function readJsonDir<T>(dir: string): T[] {
   return out
 }
 
+/** Stable ids for parent lookups: use JSON id, else filename stem (missing id broke sub-industry saves). */
+function readIndustriesFromDisk(dir: string): Industry[] {
+  if (!existsSync(dir)) return []
+  const files = readdirSync(dir).filter((f) => f.endsWith('.json'))
+  const out: Industry[] = []
+  for (const f of files) {
+    try {
+      const raw = readFileSync(join(dir, f), 'utf-8')
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      const stem = f.replace(/\.json$/i, '')
+      const id =
+        typeof parsed.id === 'string' && parsed.id.trim() ? parsed.id.trim() : stem
+      const name =
+        typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : 'Untitled'
+      let parentId: string | undefined
+      if (typeof parsed.parentId === 'string' && parsed.parentId.trim()) {
+        parentId = parsed.parentId.trim()
+      }
+      const description =
+        typeof parsed.description === 'string' && parsed.description.trim()
+          ? parsed.description.trim()
+          : undefined
+      const createdAt =
+        typeof parsed.createdAt === 'string' && parsed.createdAt.trim()
+          ? parsed.createdAt.trim()
+          : now()
+      const updatedAt =
+        typeof parsed.updatedAt === 'string' && parsed.updatedAt.trim()
+          ? parsed.updatedAt.trim()
+          : now()
+      out.push({ id, name, parentId, description, createdAt, updatedAt })
+    } catch {
+      /* skip corrupt */
+    }
+  }
+  return out
+}
+
 function wouldCreateIndustryCycle(
   all: Industry[],
   industryId: string,
@@ -91,7 +129,7 @@ function wouldCreateIndustryCycle(
 }
 
 export function listIndustries(root: string): Industry[] {
-  return readJsonDir<Industry>(join(root, 'industries'))
+  return readIndustriesFromDisk(join(root, 'industries'))
 }
 
 export function listCompanies(root: string): Company[] {
@@ -134,17 +172,20 @@ function optLatLon(
 export function saveIndustry(root: string, input: Partial<Industry> & { name: string }): Industry {
   ensureWorkspace(root)
   const dir = join(root, 'industries')
-  const all = readJsonDir<Industry>(dir)
+  const all = readIndustriesFromDisk(dir)
   const id = input.id ?? uuidv4()
   const existing =
     input.id && existsSync(join(dir, `${input.id}.json`))
       ? (JSON.parse(readFileSync(join(dir, `${input.id}.json`), 'utf-8')) as Industry)
       : null
 
-  let parentId =
-    typeof input.parentId === 'string' && input.parentId.trim()
-      ? input.parentId.trim()
-      : undefined
+  const rawParent = (input as { parentId?: unknown }).parentId
+  let parentId: string | undefined
+  if (typeof rawParent === 'string' && rawParent.trim()) {
+    parentId = rawParent.trim()
+  } else if (rawParent != null && String(rawParent).trim()) {
+    parentId = String(rawParent).trim()
+  }
   if (parentId && !all.some((x) => x.id === parentId)) {
     parentId = undefined
   }
@@ -233,7 +274,7 @@ export function saveContact(
 }
 
 export function deleteIndustry(root: string, id: string): void {
-  const all = readJsonDir<Industry>(join(root, 'industries'))
+  const all = readIndustriesFromDisk(join(root, 'industries'))
   if (all.some((i) => i.parentId === id)) {
     throw new Error('INDUSTRY_HAS_CHILDREN')
   }
