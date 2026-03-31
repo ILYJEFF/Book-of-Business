@@ -77,3 +77,24 @@ export interface SaveUrlChannels {
   linkedinUrl: string
   website: string
 }
+
+/** Full-library backup produced by Settings export. */
+export interface BookExportBundle {
+  format: 'book-of-business-export'
+  version: number
+  exportedAt: string
+  industries: Industry[]
+  companies: Company[]
+  contacts: Contact[]
+}
+
+export type WorkspaceImportMode = 'merge' | 'replace'
+
+export type WorkspaceExportResult =
+  | { canceled: true }
+  | { canceled: false; path: string }
+
+export type WorkspaceImportResult =
+  | { canceled: true }
+  | { canceled: false; error: string }
+  | { canceled: false; imported: { industries: number; companies: number; contacts: number } }

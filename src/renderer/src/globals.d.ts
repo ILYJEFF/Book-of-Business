@@ -1,4 +1,13 @@
-import type { Company, Contact, GeocodeResult, Industry, SaveUrlChannels } from '../../shared/types'
+import type {
+  Company,
+  Contact,
+  GeocodeResult,
+  Industry,
+  SaveUrlChannels,
+  WorkspaceExportResult,
+  WorkspaceImportMode,
+  WorkspaceImportResult
+} from '../../shared/types'
 
 export interface BookBridge {
   getWorkspace: () => Promise<string | null>
@@ -30,6 +39,8 @@ export interface BookBridge {
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
   openExternal: (url: string) => Promise<void>
   readClipboardImageDataUrlSync: () => string | null
+  exportWorkspace: () => Promise<WorkspaceExportResult>
+  importWorkspace: (mode: WorkspaceImportMode) => Promise<WorkspaceImportResult>
 }
 
 declare global {

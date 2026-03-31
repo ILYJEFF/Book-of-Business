@@ -1978,6 +1978,37 @@ a:hover {
   font-weight: 650;
   letter-spacing: -0.02em;
 }
+.settings-data-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.settings-data-banner {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.settings-data-banner--ok {
+  background: rgba(120, 180, 140, 0.12);
+  border: 1px solid rgba(120, 180, 140, 0.28);
+  color: var(--text-primary);
+}
+.settings-data-banner--err {
+  background: var(--danger-dim);
+  border: 1px solid rgba(224, 120, 108, 0.35);
+  color: #f0c4be;
+}
+.settings-data-danger {
+  color: #f0a89e;
+}
+.settings-data-danger:hover:not(:disabled) {
+  border-color: rgba(224, 120, 108, 0.45);
+  color: #fcd9d4;
+}
 .code-block {
   margin-top: 12px;
   padding: 16px 18px;

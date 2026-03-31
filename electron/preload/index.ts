@@ -1,5 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Company, Contact, GeocodeResult, Industry, SaveUrlChannels } from '../../src/shared/types'
+import type {
+  Company,
+  Contact,
+  GeocodeResult,
+  Industry,
+  SaveUrlChannels,
+  WorkspaceExportResult,
+  WorkspaceImportMode,
+  WorkspaceImportResult
+} from '../../src/shared/types'
 
 export interface BookAPI {
   getWorkspace: () => Promise<string | null>
@@ -34,6 +43,8 @@ export interface BookAPI {
   openExternal: (url: string) => Promise<void>
   /** macOS / Electron: image on clipboard when `clipboardData` in the renderer is empty. */
   readClipboardImageDataUrlSync: () => string | null
+  exportWorkspace: () => Promise<WorkspaceExportResult>
+  importWorkspace: (mode: WorkspaceImportMode) => Promise<WorkspaceImportResult>
 }
 
 const api: BookAPI = {
@@ -61,7 +72,9 @@ const api: BookAPI = {
   readClipboardImageDataUrlSync: () => {
     const v = ipcRenderer.sendSync('clipboard:readImageDataUrlSync') as string | null | undefined
     return v ?? null
-  }
+  },
+  exportWorkspace: () => ipcRenderer.invoke('data:exportWorkspace'),
+  importWorkspace: (mode) => ipcRenderer.invoke('data:importWorkspace', mode)
 }
 
 contextBridge.exposeInMainWorld('book', api)

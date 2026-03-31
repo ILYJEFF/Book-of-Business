@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { loadSettings, saveSettings } from './store'
 import { geocodeSearch } from './geocode'
 import {
@@ -17,6 +17,12 @@ import {
   updateCompanyPin,
   updateContactPin
 } from './workspace'
+import {
+  applyExportBundle,
+  buildExportBundle,
+  parseExportBundle,
+  writeBundleFile
+} from './dataBundle'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -153,6 +159,41 @@ app.whenReady().then(() => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     deleteContact(root, id)
+  })
+
+  ipcMain.handle('data:exportWorkspace', async () => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    const win = BrowserWindow.getFocusedWindow() ?? mainWindow
+    const bundle = buildExportBundle(root)
+    const day = new Date().toISOString().slice(0, 10)
+    const r = await dialog.showSaveDialog(win!, {
+      defaultPath: `book-of-business-export-${day}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (r.canceled || !r.filePath) return { canceled: true as const }
+    writeBundleFile(r.filePath, bundle)
+    return { canceled: false as const, path: r.filePath }
+  })
+
+  ipcMain.handle('data:importWorkspace', async (_e, mode: unknown) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    const win = BrowserWindow.getFocusedWindow() ?? mainWindow
+    const r = await dialog.showOpenDialog(win!, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Book of Business export', extensions: ['json'] },
+        { name: 'All files', extensions: ['*'] }
+      ]
+    })
+    if (r.canceled || !r.filePaths[0]) return { canceled: true as const }
+    const raw = readFileSync(r.filePaths[0], 'utf-8')
+    const parsed = parseExportBundle(raw)
+    if (!parsed.ok) return { canceled: false as const, error: parsed.message }
+    const m = mode === 'replace' ? 'replace' : 'merge'
+    const imported = applyExportBundle(root, parsed.bundle, m)
+    return { canceled: false as const, imported }
   })
 
   ipcMain.on('clipboard:readImageDataUrlSync', (event) => {
