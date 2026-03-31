@@ -70,3 +70,10 @@ export interface WorkspaceManifest {
   app: string
   updatedAt: string
 }
+
+/** Passed beside save payloads so Electron IPC does not drop long or nested URL strings. */
+export interface SaveUrlChannels {
+  photoUrl: string
+  linkedinUrl: string
+  website: string
+}

@@ -5,6 +5,7 @@ import type {
   Company,
   Contact,
   Industry,
+  SaveUrlChannels,
   WorkspaceManifest
 } from '../../src/shared/types'
 const SCHEMA = 1
@@ -215,11 +216,21 @@ export function saveIndustry(root: string, input: Partial<Industry> & { name: st
   return row
 }
 
+function isSaveUrlChannels(x: unknown): x is SaveUrlChannels {
+  if (!x || typeof x !== 'object') return false
+  const o = x as Record<string, unknown>
+  return (
+    typeof o.photoUrl === 'string' &&
+    typeof o.linkedinUrl === 'string' &&
+    typeof o.website === 'string'
+  )
+}
+
 export function saveCompany(
   root: string,
   input: Partial<Company> & { name: string },
-  /** Passed separately from the renderer so large `data:` URLs are not dropped by IPC cloning. */
-  photoUrlFromChannel?: string
+  /** Logo, LinkedIn, and site URLs (parallel to payload so IPC keeps them). */
+  urlChannels?: SaveUrlChannels
 ): Company {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
@@ -230,32 +241,39 @@ export function saveCompany(
         ) as Company)
       : null
   const coords = optLatLon(input.latitude, input.longitude)
-  let photoUrl: string | undefined
-  if (typeof photoUrlFromChannel === 'string') {
-    photoUrl = photoUrlFromChannel.trim() ? photoUrlFromChannel.trim() : undefined
-  } else if (Object.hasOwn(input as object, 'photoUrl')) {
-    photoUrl =
-      typeof input.photoUrl === 'string' && input.photoUrl.trim()
-        ? input.photoUrl.trim()
-        : undefined
-  } else {
-    photoUrl = existing?.photoUrl
-  }
 
+  let photoUrl: string | undefined
   let linkedinUrl: string | undefined
-  if (Object.hasOwn(input as object, 'linkedinUrl')) {
-    linkedinUrl =
-      typeof input.linkedinUrl === 'string' && input.linkedinUrl.trim()
-        ? input.linkedinUrl.trim()
-        : undefined
+  let website: string | undefined
+
+  if (isSaveUrlChannels(urlChannels)) {
+    photoUrl = urlChannels.photoUrl.trim() ? urlChannels.photoUrl.trim() : undefined
+    linkedinUrl = urlChannels.linkedinUrl.trim() ? urlChannels.linkedinUrl.trim() : undefined
+    website = urlChannels.website.trim() ? urlChannels.website.trim() : undefined
   } else {
-    linkedinUrl = existing?.linkedinUrl
+    if (Object.hasOwn(input as object, 'photoUrl')) {
+      photoUrl =
+        typeof input.photoUrl === 'string' && input.photoUrl.trim()
+          ? input.photoUrl.trim()
+          : undefined
+    } else {
+      photoUrl = existing?.photoUrl
+    }
+    if (Object.hasOwn(input as object, 'linkedinUrl')) {
+      linkedinUrl =
+        typeof input.linkedinUrl === 'string' && input.linkedinUrl.trim()
+          ? input.linkedinUrl.trim()
+          : undefined
+    } else {
+      linkedinUrl = existing?.linkedinUrl
+    }
+    website = input.website?.trim() || undefined
   }
 
   const row: Company = {
     id,
     name: input.name.trim(),
-    website: input.website?.trim() || undefined,
+    website,
     linkedinUrl,
     industryId: input.industryId || undefined,
     notes: input.notes?.trim() || undefined,
@@ -275,8 +293,8 @@ export function saveContact(
   input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] },
   /** Prefer this value (string or null to clear); avoids IPC losing nested fields on some builds. */
   departmentFromChannel?: unknown,
-  /** Large `data:` URLs: pass separately so IPC cloning does not drop them. */
-  photoUrlFromChannel?: string
+  /** Photo + LinkedIn + website strings beside payload for reliable IPC. */
+  urlChannels?: SaveUrlChannels
 ): Contact {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
@@ -290,17 +308,25 @@ export function saveContact(
       ? departmentFromChannel
       : (input as Record<string, unknown>)['department']
 
-  const nextLi = input.linkedinUrl?.trim() || undefined
+  let linkedinUrl: string | undefined
   let photoUrl: string | undefined
-  if (typeof photoUrlFromChannel === 'string') {
-    photoUrl = photoUrlFromChannel.trim() ? photoUrlFromChannel.trim() : undefined
-  } else if (Object.hasOwn(input as object, 'photoUrl')) {
-    photoUrl =
-      typeof input.photoUrl === 'string' && input.photoUrl.trim()
-        ? input.photoUrl.trim()
-        : undefined
+  let website: string | undefined
+
+  if (isSaveUrlChannels(urlChannels)) {
+    photoUrl = urlChannels.photoUrl.trim() ? urlChannels.photoUrl.trim() : undefined
+    linkedinUrl = urlChannels.linkedinUrl.trim() ? urlChannels.linkedinUrl.trim() : undefined
+    website = urlChannels.website.trim() ? urlChannels.website.trim() : undefined
   } else {
-    photoUrl = existing?.photoUrl
+    linkedinUrl = input.linkedinUrl?.trim() || undefined
+    website = input.website?.trim() || undefined
+    if (Object.hasOwn(input as object, 'photoUrl')) {
+      photoUrl =
+        typeof input.photoUrl === 'string' && input.photoUrl.trim()
+          ? input.photoUrl.trim()
+          : undefined
+    } else {
+      photoUrl = existing?.photoUrl
+    }
   }
 
   const row: Contact = {
@@ -316,9 +342,9 @@ export function saveContact(
           .filter((p) => p && String(p.value).trim())
           .map((p) => ({ label: (p.label || 'Phone').trim(), value: String(p.value).trim() }))
       : [],
-    linkedinUrl: nextLi,
+    linkedinUrl,
     photoUrl,
-    website: input.website?.trim() || undefined,
+    website,
     companyIds: Array.isArray(input.companyIds) ? [...new Set(input.companyIds)] : [],
     industryIds: Array.isArray(input.industryIds) ? [...new Set(input.industryIds)] : [],
     notes: input.notes?.trim() || undefined,

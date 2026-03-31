@@ -115,17 +115,20 @@ export default function CompaniesView(): React.ReactElement {
     if (!draft?.name?.trim()) return
     setSaving(true)
     try {
-      const { photoUrl: logoData, ...draftBody } = draft
+      const { photoUrl: logoData, linkedinUrl: liDraft, website: webDraft, ...draftBody } = draft
       const saved = await window.book.saveCompany(
         {
           ...draftBody,
           name: draft.name.trim(),
-          website: draft.website?.trim() || undefined,
           industryId: draft.industryId || undefined,
           notes: draft.notes?.trim() || undefined,
           address: draft.address?.trim() || undefined
         },
-        typeof logoData === 'string' ? logoData : ''
+        {
+          photoUrl: typeof logoData === 'string' ? logoData : '',
+          linkedinUrl: (liDraft ?? '').trim(),
+          website: (webDraft ?? '').trim()
+        }
       )
       await refresh({ background: true })
       setSelectedId(saved.id)

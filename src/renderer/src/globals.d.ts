@@ -1,4 +1,4 @@
-import type { Company, Contact, GeocodeResult, Industry } from '../../shared/types'
+import type { Company, Contact, GeocodeResult, Industry, SaveUrlChannels } from '../../shared/types'
 
 export interface BookBridge {
   getWorkspace: () => Promise<string | null>
@@ -11,7 +11,7 @@ export interface BookBridge {
   saveIndustry: (payload: Partial<Industry> & { name: string }) => Promise<Industry>
   saveCompany: (
     payload: Partial<Company> & { name: string },
-    photoUrl: string
+    urlChannels: SaveUrlChannels
   ) => Promise<Company>
   saveContact: (
     payload: Partial<Contact> & {
@@ -20,7 +20,7 @@ export interface BookBridge {
       category: Contact['category']
     },
     department: string | null,
-    photoUrl: string
+    urlChannels: SaveUrlChannels
   ) => Promise<Contact>
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
