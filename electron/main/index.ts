@@ -150,6 +150,18 @@ app.whenReady().then(() => {
     deleteContact(root, id)
   })
 
+  ipcMain.handle('shell:openExternal', async (_e, url: string) => {
+    if (typeof url !== 'string' || !url.trim()) return
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      return
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return
+    await shell.openExternal(url)
+  })
+
   ipcMain.handle('geo:search', async (_e, query: string) => {
     if (typeof query !== 'string') return null
     return geocodeSearch(query)

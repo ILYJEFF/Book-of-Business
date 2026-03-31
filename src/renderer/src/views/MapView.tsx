@@ -4,6 +4,12 @@ import type { Company, Contact } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import { contactDisplayName } from '../lib/format'
 
+function googleMapsSearchUrl(company: Company, lat: number, lon: number): string {
+  const byName = `${company.name} ${(company.address ?? '').trim()}`.trim()
+  const query = byName || `${lat},${lon}`
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+}
+
 const PIN_CONTACT = '#9a6b3c'
 const PIN_COMPANY = '#5f735f'
 
@@ -79,18 +85,62 @@ function stackTooltipHtml(stack: PinStack): string {
 }
 
 function stackPopupHtml(stack: PinStack): string {
-  const buttons: string[] = []
+  const { lat, lon } = stack
+  const blocks: string[] = []
   for (const c of stack.contacts) {
-    buttons.push(
+    blocks.push(
       `<button type="button" class="map-popup-stack-row focus-ring" data-map-open="contact" data-map-id="${escapeHtml(c.id)}">${escapeHtml(contactDisplayName(c))} <span class="map-stack-kind">Person</span></button>`
     )
   }
   for (const c of stack.companies) {
-    buttons.push(
-      `<button type="button" class="map-popup-stack-row focus-ring" data-map-open="company" data-map-id="${escapeHtml(c.id)}">${escapeHtml(c.name)} <span class="map-stack-kind">Company</span></button>`
+    const mapsUrl = googleMapsSearchUrl(c, lat, lon)
+    blocks.push(
+      `<div class="map-popup-co-block">` +
+        `<button type="button" class="map-popup-stack-row focus-ring" data-map-open="company" data-map-id="${escapeHtml(c.id)}">${escapeHtml(c.name)} <span class="map-stack-kind">Company</span></button>` +
+        `<button type="button" class="map-popup-maps-btn focus-ring" data-map-external="${encodeURIComponent(mapsUrl)}">Google Maps (photos &amp; hours)</button>` +
+        `</div>`
     )
   }
-  return `<div class="map-popup map-popup-stack"><p class="map-popup-stack-lead">Open one:</p>${buttons.join('')}</div>`
+  return `<div class="map-popup map-popup-stack"><p class="map-popup-stack-lead">Open one:</p>${blocks.join('')}</div>`
+}
+
+function singleCompanyPopupHtml(c: Company, lat: number, lon: number): string {
+  const mapsUrl = googleMapsSearchUrl(c, lat, lon)
+  return (
+    `<div class="map-popup map-popup-stack map-popup--single-co">` +
+      `<button type="button" class="map-popup-stack-row focus-ring" data-map-open="company" data-map-id="${escapeHtml(c.id)}">Open ${escapeHtml(c.name)}</button>` +
+      `<button type="button" class="map-popup-maps-btn map-popup-maps-btn--solo focus-ring" data-map-external="${encodeURIComponent(mapsUrl)}">Google Maps (photos, hours, reviews)</button>` +
+      `</div>`
+  )
+}
+
+function wireMapPopup(el: HTMLElement, marker: L.Marker, openRecord: (kind: 'contact' | 'company', id: string) => void): void {
+  el.querySelectorAll<HTMLButtonElement>('.map-popup-stack-row').forEach((btn) => {
+    const handler = (ev: Event) => {
+      ev.preventDefault()
+      const kind = btn.getAttribute('data-map-open')
+      const id = btn.getAttribute('data-map-id')
+      if (kind === 'contact' && id) openRecord('contact', id)
+      else if (kind === 'company' && id) openRecord('company', id)
+      marker.closePopup()
+    }
+    btn.addEventListener('click', handler, { once: true })
+  })
+  el.querySelectorAll<HTMLButtonElement>('.map-popup-maps-btn').forEach((btn) => {
+    const enc = btn.getAttribute('data-map-external')
+    if (!enc) return
+    let url: string
+    try {
+      url = decodeURIComponent(enc)
+    } catch {
+      return
+    }
+    const handler = (ev: Event) => {
+      ev.preventDefault()
+      void window.book.openExternal(url)
+    }
+    btn.addEventListener('click', handler, { once: true })
+  })
 }
 
 export default function MapView(): React.ReactElement {
@@ -165,27 +215,20 @@ export default function MapView(): React.ReactElement {
       })
 
       const total = sc.length + sco.length
-      if (total === 1) {
+      const singleContactOnly = total === 1 && sc.length === 1
+      const singleCompanyOnly = total === 1 && sco.length === 1
+
+      if (singleContactOnly) {
         m.on('click', () => {
-          if (sc[0]) requestOpenRecord('contact', sc[0].id)
-          else if (sco[0]) requestOpenRecord('company', sco[0].id)
+          requestOpenRecord('contact', sc[0].id)
         })
       } else {
-        m.bindPopup(stackPopupHtml(stack))
+        const popupHtml = singleCompanyOnly ? singleCompanyPopupHtml(sco[0], lat, lon) : stackPopupHtml(stack)
+        m.bindPopup(popupHtml)
         m.on('popupopen', () => {
-          const el = m.getPopup()?.getElement()
-          if (!el) return
-          el.querySelectorAll<HTMLButtonElement>('.map-popup-stack-row').forEach((btn) => {
-            const handler = (ev: Event) => {
-              ev.preventDefault()
-              const kind = btn.getAttribute('data-map-open')
-              const id = btn.getAttribute('data-map-id')
-              if (kind === 'contact' && id) requestOpenRecord('contact', id)
-              else if (kind === 'company' && id) requestOpenRecord('company', id)
-              m.closePopup()
-            }
-            btn.addEventListener('click', handler, { once: true })
-          })
+          const pel = m.getPopup()?.getElement()
+          if (!pel) return
+          wireMapPopup(pel, m, requestOpenRecord)
         })
       }
 
@@ -241,8 +284,9 @@ export default function MapView(): React.ReactElement {
           </ul>
         </div>
         <p className="map-toolbar-note muted small">
-          Same coordinates share one dot (count badge when stacked). Hover a dot for everyone there. Click opens the record,
-          or choose from the list when several share a pin. Drag moves every record at that pin.
+          Same coordinates share one dot (count badge when stacked). Hover a dot for everyone there. People: click opens the
+          profile. Companies: click opens a menu with Open and Google Maps (photos and hours). Drag moves every record at that
+          pin.
         </p>
       </div>
       <div className="map-frame">

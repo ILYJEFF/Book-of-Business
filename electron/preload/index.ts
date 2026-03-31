@@ -26,6 +26,7 @@ export interface BookAPI {
   updateContactPin: (id: string, latitude: number, longitude: number) => Promise<Contact>
   updateCompanyPin: (id: string, latitude: number, longitude: number) => Promise<Company>
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
+  openExternal: (url: string) => Promise<void>
 }
 
 const api: BookAPI = {
@@ -46,7 +47,8 @@ const api: BookAPI = {
     ipcRenderer.invoke('data:updateContactPin', id, latitude, longitude),
   updateCompanyPin: (id, latitude, longitude) =>
     ipcRenderer.invoke('data:updateCompanyPin', id, latitude, longitude),
-  geocodeSearch: (query) => ipcRenderer.invoke('geo:search', query)
+  geocodeSearch: (query) => ipcRenderer.invoke('geo:search', query),
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
 }
 
 contextBridge.exposeInMainWorld('book', api)

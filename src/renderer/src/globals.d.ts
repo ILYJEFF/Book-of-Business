@@ -24,6 +24,7 @@ export interface BookBridge {
   updateContactPin: (id: string, latitude: number, longitude: number) => Promise<Contact>
   updateCompanyPin: (id: string, latitude: number, longitude: number) => Promise<Company>
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
+  openExternal: (url: string) => Promise<void>
 }
 
 declare global {

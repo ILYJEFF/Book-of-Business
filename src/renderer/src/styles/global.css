@@ -541,6 +541,42 @@ a:hover {
   background: var(--bg-hover);
   border-color: var(--border-medium);
 }
+.map-popup-co-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.map-popup-co-block:last-child {
+  margin-bottom: 0;
+}
+.map-popup-maps-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px 8px;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--accent-line);
+  background: var(--accent-dim);
+  border: 1px solid rgba(201, 160, 106, 0.35);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.12s var(--ease-out),
+    border-color 0.12s var(--ease-out);
+}
+.map-popup-maps-btn:hover {
+  background: var(--accent-dim-strong);
+  border-color: rgba(201, 160, 106, 0.5);
+  color: var(--text-primary);
+}
+.map-popup-maps-btn--solo {
+  margin-top: 2px;
+}
 
 /* Sidebar */
 .sidebar {
