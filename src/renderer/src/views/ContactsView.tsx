@@ -4,8 +4,8 @@ import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
 import ContactFilterPanel from '../components/ContactFilterPanel'
+import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
-import { BUSINESS_DEPARTMENTS, BUSINESS_DEPARTMENT_SET } from '../lib/businessDepartments'
 import { contactDisplayName, companyById, industryPathLabel, initials } from '../lib/format'
 import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
@@ -163,13 +163,6 @@ export default function ContactsView(): React.ReactElement {
   }, [openRecordRequest, contacts, clearOpenRecordRequest, openDetail])
 
   const displayDraft = editing && draft ? draft : selected
-
-  const departmentNotInList = useMemo(() => {
-    if (!displayDraft) return null
-    const cur = ((displayDraft as Contact).department ?? '').trim()
-    if (!cur || BUSINESS_DEPARTMENT_SET.has(cur)) return null
-    return cur
-  }, [displayDraft])
 
   return (
     <div className="split-view">
@@ -354,28 +347,13 @@ export default function ContactsView(): React.ReactElement {
                       {(displayDraft as Contact).department?.trim() || 'No department on file.'}
                     </p>
                   ) : (
-                    <select
+                    <DepartmentMenu
                       id="dept"
-                      className="select-input focus-ring"
-                      value={(displayDraft as Contact).department ?? ''}
-                      onChange={(e) =>
-                        setDraft((d) => {
-                          if (!d) return d
-                          const v = e.target.value.trim()
-                          return { ...d, department: v || undefined }
-                        })
+                      value={(displayDraft as Contact).department}
+                      onChange={(next) =>
+                        setDraft((d) => (d ? { ...d, department: next } : d))
                       }
-                    >
-                      <option value="">Not specified</option>
-                      {departmentNotInList && (
-                        <option value={departmentNotInList}>{departmentNotInList}</option>
-                      )}
-                      {BUSINESS_DEPARTMENTS.map((name) => (
-                        <option key={name} value={name}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   )}
                 </div>
               </div>
