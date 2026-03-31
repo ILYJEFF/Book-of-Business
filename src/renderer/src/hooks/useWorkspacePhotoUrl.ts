@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -77,8 +76,9 @@ export function useWorkspacePhotoUrl<T extends DraftWithPhoto>(
   }, [])
 
   /**
-   * Electron: copied images often exist only on the native clipboard; `clipboardData` in the
-   * renderer is empty. This path is safe to run globally: text clipboard yields null here.
+   * Electron: copied images sometimes only exist on the native clipboard (`clipboardData` empty).
+   * Only call when the paste event does not carry plain text, otherwise a stale bitmap on the OS
+   * clipboard can win over the text the user actually copied.
    */
   const tryConsumeNativeImage = useCallback(
     (e: ClipboardEvent): boolean => {
@@ -103,28 +103,28 @@ export function useWorkspacePhotoUrl<T extends DraftWithPhoto>(
   )
 
   /**
-   * Full clipboard handling for the photo drop zone only. Never call `preventDefault` before we
-   * know the payload is an image: macOS often exposes text pastes with `kind: file` items and an
-   * empty MIME type, which would block normal paste app-wide if we used a document listener.
+   * Photo drop zone only. No document-level listener, so normal paste works in inputs everywhere.
    */
   const handlePhotoFieldPasteCapture = useCallback(
     (e: ClipboardEvent): void => {
       if (!editingRef.current) return
-      if (tryConsumeNativeImage(e)) return
 
       const cd = e.clipboardData
+      const textPlain = cd?.getData('text/plain')?.trim() ?? ''
+      const pastedTextIsImageDataUrl =
+        textPlain.startsWith('data:image/') && textPlain.includes(',') && textPlain.length <= 3_500_000
+      const hasOtherPlainText = textPlain.length > 0 && !pastedTextIsImageDataUrl
+
+      if (!hasOtherPlainText && tryConsumeNativeImage(e)) return
       if (!cd) return
 
-      const plain = cd.getData('text/plain').trim()
-      if (
-        plain.startsWith('data:image/') &&
-        plain.includes(',') &&
-        plain.length <= 3_500_000
-      ) {
+      if (pastedTextIsImageDataUrl) {
         e.preventDefault()
-        void normalizeEmbeddedPhotoDataUrl(plain).then(applyUrl).catch(fail)
+        void normalizeEmbeddedPhotoDataUrl(textPlain).then(applyUrl).catch(fail)
         return
       }
+
+      if (hasOtherPlainText) return
 
       void clipboardDataToPhotoDataUrl(cd)
         .then((url) => {
@@ -141,20 +141,6 @@ export function useWorkspacePhotoUrl<T extends DraftWithPhoto>(
     },
     [handlePhotoFieldPasteCapture]
   )
-
-  /** Only native bitmap: avoids hijacking text paste when focus is in inputs. */
-  const handleDocumentPasteCapture = useCallback(
-    (e: ClipboardEvent): void => {
-      if (!editingRef.current) return
-      tryConsumeNativeImage(e)
-    },
-    [tryConsumeNativeImage]
-  )
-
-  useEffect(() => {
-    document.addEventListener('paste', handleDocumentPasteCapture, true)
-    return () => document.removeEventListener('paste', handleDocumentPasteCapture, true)
-  }, [handleDocumentPasteCapture])
 
   return useMemo(
     () => ({
