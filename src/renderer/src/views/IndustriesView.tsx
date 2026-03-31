@@ -122,27 +122,61 @@ export default function IndustriesView(): React.ReactElement {
           <button type="button" className="btn btn-primary focus-ring btn-block" onClick={() => startCreate()}>
             New top-level industry
           </button>
+          <p className="industry-list-hint">
+            Nesting is saved on each file. Pick a parent with <strong>Edit</strong>, or use <strong>Add sub-industry</strong>{' '}
+            on a row. Flat names here mean nothing is filed under a parent yet.
+          </p>
         </div>
-        <div className="scroll-y list-rows">
+        <div className="scroll-y list-rows list-rows--industry-tree">
           {ordered.map(({ industry: i, depth }) => {
             const on = i.id === selectedId && !creating
-            const desc = i.description
-              ? i.description.length > 72
-                ? `${i.description.slice(0, 72)}…`
+            const isNested = depth > 0
+            const parentName = i.parentId ? industryMap.get(i.parentId)?.name : null
+            const descShort = i.description
+              ? i.description.length > 64
+                ? `${i.description.slice(0, 64)}…`
                 : i.description
-              : 'No description'
+              : null
             return (
               <button
                 key={i.id}
                 type="button"
+                data-depth={String(depth)}
                 onClick={() => open(i)}
-                className={`list-row list-row--industry-child focus-ring${on ? ' list-row--active' : ''}`}
-                style={{ paddingLeft: 16 + depth * 18 }}
+                className={`list-row list-row--industry focus-ring${isNested ? ' list-row--industry-nested' : ''}${on ? ' list-row--active' : ''}`}
               >
-                <div className="avatar avatar--sm avatar--industry">{indInitial(i.name)}</div>
+                <span className="industry-tree-indent" aria-hidden style={{ width: Math.max(0, (depth - 1) * 22 + (isNested ? 10 : 0)) }} />
+                {isNested && <span className="industry-tree-join" aria-hidden />}
+                <div
+                  className={`avatar avatar--industry${isNested ? ' avatar--industry-nested' : ' avatar--sm'}`}
+                >
+                  {indInitial(i.name)}
+                </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="list-row-title">{i.name}</div>
-                  <div className="list-row-sub">{desc}</div>
+                  <div className={`list-row-title${isNested ? ' list-row-title--nested-industry' : ''}`}>
+                    {isNested && <span className="industry-nested-mark">Sub</span>}
+                    <span className="list-row-title-text">{i.name}</span>
+                  </div>
+                  <div className={`list-row-sub${isNested ? ' list-row-sub--nested-industry' : ''}`}>
+                    {isNested ? (
+                      <>
+                        <span className="industry-sub-hint">Filed under </span>
+                        <span className="industry-sub-parent">{parentName ?? 'parent missing'}</span>
+                        {descShort ? (
+                          <>
+                            <span className="industry-sub-dot"> · </span>
+                            <span>{descShort}</span>
+                          </>
+                        ) : (
+                          <span className="list-row-sub-muted"> · no notes yet</span>
+                        )}
+                      </>
+                    ) : descShort ? (
+                      descShort
+                    ) : (
+                      <span className="list-row-sub-muted">Top-level sector · no notes yet</span>
+                    )}
+                  </div>
                 </div>
               </button>
             )
