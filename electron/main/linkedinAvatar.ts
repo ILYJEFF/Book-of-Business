@@ -3,11 +3,9 @@
  *
  * 1) Microlink API (https://microlink.io) reads the page and returns og:image.
  *    Your profile URL is sent to their service (see their privacy policy).
- * 2) Fallback: fetch HTML in-app via Electron net.fetch (Chromium stack), then global fetch,
- *    and parse og:image tags.
+ * 2) Fallback: Node fetch of profile HTML and parse og:image tags.
+ *    (Avoid Electron net.fetch: some responses use status codes outside 200–599 and crash undici.)
  */
-
-import { net } from 'electron'
 
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
@@ -81,14 +79,6 @@ function extractBestProfileImage(html: string): string | null {
   return null
 }
 
-async function fetchWithNetOrGlobal(url: string, init?: RequestInit): Promise<Response> {
-  try {
-    return await net.fetch(url, init)
-  } catch {
-    return globalThis.fetch(url, init)
-  }
-}
-
 /** Microlink resolves Open Graph metadata without running a full browser. */
 async function fetchPhotoViaMicrolink(profileUrl: string): Promise<string | null> {
   const api = new URL('https://api.microlink.io/')
@@ -124,7 +114,7 @@ async function fetchPhotoViaMicrolink(profileUrl: string): Promise<string | null
 async function fetchPhotoViaHtmlScrape(profileUrl: string): Promise<string | null> {
   let res: Response
   try {
-    res = await fetchWithNetOrGlobal(profileUrl, {
+    res = await globalThis.fetch(profileUrl, {
       headers: {
         'User-Agent': BROWSER_UA,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -150,11 +140,15 @@ async function fetchPhotoViaHtmlScrape(profileUrl: string): Promise<string | nul
 }
 
 export async function fetchLinkedInProfilePhotoUrl(linkedinUrl: string): Promise<string | null> {
-  const profile = normalizeLinkedInProfileUrl(linkedinUrl)
-  if (!profile) return null
+  try {
+    const profile = normalizeLinkedInProfileUrl(linkedinUrl)
+    if (!profile) return null
 
-  const fromMicrolink = await fetchPhotoViaMicrolink(profile)
-  if (fromMicrolink) return fromMicrolink
+    const fromMicrolink = await fetchPhotoViaMicrolink(profile)
+    if (fromMicrolink) return fromMicrolink
 
-  return fetchPhotoViaHtmlScrape(profile)
+    return await fetchPhotoViaHtmlScrape(profile)
+  } catch {
+    return null
+  }
 }
