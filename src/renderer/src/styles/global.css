@@ -464,6 +464,109 @@ a:hover {
   gap: 10px;
   padding: 10px;
 }
+.split-view--browse {
+  position: relative;
+  gap: 0;
+}
+.list-column--browse {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.list-browse-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.list-results-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  flex-shrink: 0;
+  padding: 14px 16px 12px;
+  margin: 0;
+  background: linear-gradient(180deg, var(--bg-sunk) 88%, rgba(24, 22, 20, 0));
+  border-bottom: 1px solid var(--border-hairline);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+.list-results-body {
+  flex: 1;
+  min-height: 0;
+}
+.detail-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  margin: 0;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: rgba(10, 9, 8, 0.52);
+  animation: detail-backdrop-in 0.18s var(--ease-out) both;
+}
+@keyframes detail-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.detail-column--overlay {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  bottom: 6px;
+  width: min(520px, calc(100% - 12px));
+  max-width: 100%;
+  z-index: 26;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-sunk);
+  box-shadow:
+    -20px 0 48px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 250, 240, 0.04);
+  animation: detail-panel-in 0.22s var(--ease-out) both;
+}
+@keyframes detail-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.detail-overlay-top {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-hairline);
+  background: rgba(0, 0, 0, 0.12);
+}
+.detail-overlay-dismiss {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+}
+.detail-column--overlay .detail-inner {
+  flex: 1;
+  min-height: 0;
+  padding-top: 20px;
+}
 .list-column {
   width: 300px;
   min-width: 240px;
