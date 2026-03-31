@@ -64,10 +64,14 @@ function stackIcon(contactCount: number, companyCount: number): L.DivIcon {
 function stackTooltipHtml(stack: PinStack): string {
   const rows: string[] = []
   for (const c of stack.contacts) {
-    rows.push(`<li><span class="map-stack-name">${escapeHtml(contactDisplayName(c))}</span> <span class="map-stack-kind">Person</span></li>`)
+    rows.push(
+      `<li class="map-stack-tooltip-row"><span class="map-stack-swatch" style="background:${PIN_CONTACT}" aria-hidden="true"></span><span class="map-stack-name">${escapeHtml(contactDisplayName(c))}</span></li>`
+    )
   }
   for (const c of stack.companies) {
-    rows.push(`<li><span class="map-stack-name">${escapeHtml(c.name)}</span> <span class="map-stack-kind">Company</span></li>`)
+    rows.push(
+      `<li class="map-stack-tooltip-row"><span class="map-stack-swatch" style="background:${PIN_COMPANY}" aria-hidden="true"></span><span class="map-stack-name">${escapeHtml(c.name)}</span></li>`
+    )
   }
   const title =
     rows.length === 1 ? 'At this pin' : `${rows.length} at this pin`

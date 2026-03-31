@@ -464,22 +464,35 @@ a:hover {
 }
 .map-stack-tooltip ul {
   margin: 0;
-  padding: 0 0 0 14px;
-  list-style: disc;
+  padding: 0;
+  list-style: none;
 }
-.map-stack-tooltip li {
-  margin: 4px 0;
+.map-stack-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
   padding-right: 4px;
   font-size: 13px;
   line-height: 1.35;
 }
+.map-stack-swatch {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(28, 27, 25, 0.75);
+  border: 2px solid rgba(245, 240, 232, 0.88);
+}
 .map-stack-name {
   font-weight: 500;
+  min-width: 0;
 }
-.map-stack-kind {
+/* Popup chooser only (hover tooltip uses colored swatches). */
+.map-popup-stack-row .map-stack-kind {
   font-size: 11px;
   color: var(--text-muted);
-  margin-left: 4px;
+  margin-left: 6px;
 }
 .map-popup-stack-lead {
   margin: 0 0 10px;
