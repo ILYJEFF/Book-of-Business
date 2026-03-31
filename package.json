@@ -37,6 +37,7 @@
     "appId": "com.bookofbusiness.app",
     "productName": "Book of Business",
     "icon": "build/icon.png",
+    "publish": null,
     "directories": {
       "output": "release"
     },
@@ -49,7 +50,8 @@
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "identity": null
     },
     "win": {
       "target": [
