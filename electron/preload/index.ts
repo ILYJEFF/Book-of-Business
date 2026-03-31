@@ -21,6 +21,8 @@ export interface BookAPI {
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
   deleteContact: (id: string) => Promise<void>
+  updateContactPin: (id: string, latitude: number, longitude: number) => Promise<Contact>
+  updateCompanyPin: (id: string, latitude: number, longitude: number) => Promise<Company>
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
 }
 
@@ -38,6 +40,10 @@ const api: BookAPI = {
   deleteIndustry: (id) => ipcRenderer.invoke('data:deleteIndustry', id),
   deleteCompany: (id) => ipcRenderer.invoke('data:deleteCompany', id),
   deleteContact: (id) => ipcRenderer.invoke('data:deleteContact', id),
+  updateContactPin: (id, latitude, longitude) =>
+    ipcRenderer.invoke('data:updateContactPin', id, latitude, longitude),
+  updateCompanyPin: (id, latitude, longitude) =>
+    ipcRenderer.invoke('data:updateCompanyPin', id, latitude, longitude),
   geocodeSearch: (query) => ipcRenderer.invoke('geo:search', query)
 }
 

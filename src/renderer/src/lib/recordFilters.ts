@@ -55,6 +55,7 @@ export function contactPassesFilters(
       ...(c.phones?.map((p) => p.value) ?? []),
       ...c.companyIds.map((id) => companyById(companyMap, id)),
       ...c.industryIds.map((id) => industryPathLabel(industryMap, id)),
+      c.birthday ?? '',
       c.address,
       c.notes ?? ''
     ]

@@ -1515,6 +1515,42 @@ a:hover {
   margin-bottom: 0;
   max-width: 52ch;
 }
+.address-pin-map-host {
+  margin-top: 14px;
+}
+.address-pin-map-label {
+  margin-bottom: 4px;
+}
+.address-pin-map-hint {
+  margin: 0 0 8px;
+  max-width: 52ch;
+}
+.address-pin-map {
+  height: 200px;
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--divide);
+  overflow: hidden;
+  z-index: 0;
+  background: var(--bg-sunk);
+}
+.address-pin-map.leaflet-container {
+  font-family: var(--font-sans);
+}
+.detail-form-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: 28px;
+  padding: 16px 0 8px;
+  border-top: 1px solid var(--divide);
+  background: linear-gradient(180deg, transparent 0%, var(--bg-base) 18%);
+}
+.detail-form-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
 .shrink-0 {
   flex-shrink: 0;
 }

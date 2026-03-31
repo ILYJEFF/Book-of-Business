@@ -20,6 +20,8 @@ export interface BookBridge {
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
   deleteContact: (id: string) => Promise<void>
+  updateContactPin: (id: string, latitude: number, longitude: number) => Promise<Contact>
+  updateCompanyPin: (id: string, latitude: number, longitude: number) => Promise<Company>
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
 }
 

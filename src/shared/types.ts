@@ -42,6 +42,8 @@ export interface Contact {
   companyIds: string[]
   industryIds: string[]
   notes?: string
+  /** ISO date YYYY-MM-DD */
+  birthday?: string
   address?: string
   latitude?: number
   longitude?: number

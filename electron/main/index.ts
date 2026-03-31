@@ -13,7 +13,9 @@ import {
   listIndustries,
   saveCompany,
   saveContact,
-  saveIndustry
+  saveIndustry,
+  updateCompanyPin,
+  updateContactPin
 } from './workspace'
 
 let mainWindow: BrowserWindow | null = null
@@ -117,6 +119,16 @@ app.whenReady().then(() => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     return saveContact(root, payload as Parameters<typeof saveContact>[1])
+  })
+  ipcMain.handle('data:updateContactPin', (_e, id: string, lat: number, lon: number) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    return updateContactPin(root, id, lat, lon)
+  })
+  ipcMain.handle('data:updateCompanyPin', (_e, id: string, lat: number, lon: number) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    return updateCompanyPin(root, id, lat, lon)
   })
   ipcMain.handle('data:deleteIndustry', (_e, id: string) => {
     const root = needRoot()

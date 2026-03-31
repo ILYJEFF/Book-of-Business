@@ -17,7 +17,7 @@ function pinIcon(color: string): L.DivIcon {
 }
 
 export default function MapView(): React.ReactElement {
-  const { contacts, companies, requestOpenRecord, clearOpenRecordRequest } = useApp()
+  const { contacts, companies, requestOpenRecord, clearOpenRecordRequest, refresh } = useApp()
   const wrapRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
@@ -75,11 +75,18 @@ export default function MapView(): React.ReactElement {
     for (const c of plottedContacts) {
       const lat = c.latitude!
       const lon = c.longitude!
-      const m = L.marker([lat, lon], { icon: pinIcon(PIN_CONTACT) })
+      const m = L.marker([lat, lon], { icon: pinIcon(PIN_CONTACT), draggable: true })
       m.bindPopup(
         `<div class="map-popup"><strong>${escapeHtml(contactDisplayName(c))}</strong><br/><span>Person</span></div>`
       )
       m.on('click', () => requestOpenRecord('contact', c.id))
+      m.on('dragend', () => {
+        const ll = m.getLatLng()
+        void window.book
+          .updateContactPin(c.id, ll.lat, ll.lng)
+          .then(() => refresh({ background: true }))
+          .catch(() => {})
+      })
       group.addLayer(m)
       corners.push([lat, lon])
     }
@@ -87,9 +94,16 @@ export default function MapView(): React.ReactElement {
     for (const c of plottedCompanies) {
       const lat = c.latitude!
       const lon = c.longitude!
-      const m = L.marker([lat, lon], { icon: pinIcon(PIN_COMPANY) })
+      const m = L.marker([lat, lon], { icon: pinIcon(PIN_COMPANY), draggable: true })
       m.bindPopup(`<div class="map-popup"><strong>${escapeHtml(c.name)}</strong><br/><span>Company</span></div>`)
       m.on('click', () => requestOpenRecord('company', c.id))
+      m.on('dragend', () => {
+        const ll = m.getLatLng()
+        void window.book
+          .updateCompanyPin(c.id, ll.lat, ll.lng)
+          .then(() => refresh({ background: true }))
+          .catch(() => {})
+      })
       group.addLayer(m)
       corners.push([lat, lon])
     }
@@ -101,7 +115,7 @@ export default function MapView(): React.ReactElement {
     }
 
     map.invalidateSize()
-  }, [contacts, companies, plottedContacts, plottedCompanies, requestOpenRecord])
+  }, [contacts, companies, plottedContacts, plottedCompanies, requestOpenRecord, refresh])
 
   return (
     <div className="map-view">
@@ -131,7 +145,7 @@ export default function MapView(): React.ReactElement {
           </ul>
         </div>
         <p className="map-toolbar-note muted small">
-          Tiles and search use OpenStreetMap. Click a pin to open that record.
+          Tiles use OpenStreetMap. Click a pin to open the record. Drag a pin to move it; coordinates save to disk.
         </p>
       </div>
       <div className="map-frame">

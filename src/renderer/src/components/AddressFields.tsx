@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import AddressPinMap from './AddressPinMap'
 
 interface Draft {
   address?: string
@@ -9,11 +10,13 @@ interface Draft {
 export default function AddressFields<T extends Draft>({
   draft,
   editing,
-  setDraft
+  setDraft,
+  mapVariant = 'contact'
 }: {
   draft: Partial<T> & Draft
   editing: boolean
   setDraft: Dispatch<SetStateAction<Partial<T> | null>>
+  mapVariant?: 'contact' | 'company'
 }): React.ReactElement {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -191,7 +194,8 @@ export default function AddressFields<T extends Draft>({
       )}
       {editing && (
         <p className="muted small address-pin-hint">
-          Nudge the pin by editing degrees (WGS84). Use Place on map to fill from the address, then fine-tune here.
+          Use Place on map from the address line, edit latitude and longitude if you want, or drag the pin on the preview map
+          below.
         </p>
       )}
       {err && (
@@ -208,6 +212,19 @@ export default function AddressFields<T extends Draft>({
         <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
           Pin set: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
         </p>
+      )}
+      {hasPin && (
+        <AddressPinMap
+          latitude={draft.latitude!}
+          longitude={draft.longitude!}
+          draggable={editing}
+          variant={mapVariant}
+          onDragEnd={
+            editing
+              ? (lat, lon) => setDraft((d) => (d ? { ...d, latitude: lat, longitude: lon } : d))
+              : undefined
+          }
+        />
       )}
       {!editing && !hasPin && (draft.address ?? '').trim() && (
         <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>

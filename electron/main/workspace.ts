@@ -263,6 +263,11 @@ export function saveContact(
     companyIds: Array.isArray(input.companyIds) ? [...new Set(input.companyIds)] : [],
     industryIds: Array.isArray(input.industryIds) ? [...new Set(input.industryIds)] : [],
     notes: input.notes?.trim() || undefined,
+    birthday: Object.hasOwn(input as object, 'birthday')
+      ? typeof input.birthday === 'string' && input.birthday.trim()
+        ? input.birthday.trim()
+        : undefined
+      : existing?.birthday,
     address: input.address?.trim() || undefined,
     ...coords,
     createdAt: existing?.createdAt ?? now(),
@@ -271,6 +276,38 @@ export function saveContact(
   writeFileSync(join(root, 'contacts', `${id}.json`), JSON.stringify(row, null, 2), 'utf-8')
   touchManifest(root)
   return row
+}
+
+export function updateContactPin(root: string, id: string, latitude: number, longitude: number): Contact {
+  ensureWorkspace(root)
+  const p = join(root, 'contacts', `${id}.json`)
+  if (!existsSync(p)) throw new Error('NOT_FOUND')
+  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
+  const next: Contact = {
+    ...cur,
+    latitude,
+    longitude,
+    updatedAt: now()
+  }
+  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
+  touchManifest(root)
+  return next
+}
+
+export function updateCompanyPin(root: string, id: string, latitude: number, longitude: number): Company {
+  ensureWorkspace(root)
+  const p = join(root, 'companies', `${id}.json`)
+  if (!existsSync(p)) throw new Error('NOT_FOUND')
+  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Company
+  const next: Company = {
+    ...cur,
+    latitude,
+    longitude,
+    updatedAt: now()
+  }
+  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
+  touchManifest(root)
+  return next
 }
 
 export function deleteIndustry(root: string, id: string): void {

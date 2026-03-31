@@ -220,7 +220,12 @@ export default function ContactsView(): React.ReactElement {
                 <div className="avatar avatar--lg">{initials(displayDraft as Contact)}</div>
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
-                  <p className="detail-meta">{creating ? 'New entry' : 'JSON file in your folder'}</p>
+                  <p className="detail-meta">
+                    {creating ? 'New entry' : 'JSON file in your folder'}
+                    {!creating && (displayDraft as Contact).birthday && (
+                      <> · Birthday {(displayDraft as Contact).birthday}</>
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="detail-actions">
@@ -312,6 +317,36 @@ export default function ContactsView(): React.ReactElement {
                   value={displayDraft.title ?? ''}
                   onChange={(e) => editing && setDraft((d) => (d ? { ...d, title: e.target.value } : d))}
                 />
+              </div>
+
+              <div>
+                <label className="field-label" htmlFor="birthday">
+                  Birthday
+                </label>
+                {!editing ? (
+                  (displayDraft as Contact).birthday ? (
+                    <p className="muted small" style={{ marginTop: 4, marginBottom: 0 }}>
+                      {(displayDraft as Contact).birthday}
+                    </p>
+                  ) : (
+                    <p className="muted small" style={{ marginTop: 4, marginBottom: 0 }}>
+                      No birthday on file.
+                    </p>
+                  )
+                ) : (
+                  <input
+                    id="birthday"
+                    type="date"
+                    className="text-input focus-ring"
+                    value={(displayDraft as Contact).birthday ?? ''}
+                    onChange={(e) =>
+                      editing &&
+                      setDraft((d) =>
+                        d ? { ...d, birthday: e.target.value.trim() || undefined } : d
+                      )
+                    }
+                  />
+                )}
               </div>
 
               <div className="form-row-2">
@@ -407,6 +442,19 @@ export default function ContactsView(): React.ReactElement {
                 />
               </div>
             </div>
+
+            {editing && (
+              <footer className="detail-form-footer">
+                <div className="detail-form-footer-inner">
+                  <button type="button" className="btn btn-ghost focus-ring" onClick={cancelEdit} disabled={saving}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-primary focus-ring" onClick={() => void save()} disabled={saving}>
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </footer>
+            )}
           </div>
         )}
       </div>

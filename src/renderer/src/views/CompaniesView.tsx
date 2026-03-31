@@ -281,7 +281,7 @@ export default function CompaniesView(): React.ReactElement {
                   ))}
                 </select>
               </div>
-              <AddressFields<Company> draft={display} editing={editing} setDraft={setDraft} />
+              <AddressFields<Company> draft={display} editing={editing} setDraft={setDraft} mapVariant="company" />
               <div>
                 <label className="field-label" htmlFor="co-notes">
                   Notes
@@ -296,6 +296,19 @@ export default function CompaniesView(): React.ReactElement {
                 />
               </div>
             </div>
+
+            {editing && (
+              <footer className="detail-form-footer">
+                <div className="detail-form-footer-inner">
+                  <button type="button" className="btn btn-ghost focus-ring" onClick={cancelEdit} disabled={saving}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-primary focus-ring" onClick={() => void save()} disabled={saving}>
+                    {saving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </footer>
+            )}
           </div>
         )}
       </div>
