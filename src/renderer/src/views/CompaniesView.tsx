@@ -102,37 +102,11 @@ export default function CompaniesView(): React.ReactElement {
     await refresh({ background: true })
     setSelectedId(null)
     setDraft(null)
-    setCreating(false)
     setEditing(false)
     setConfirmDelete(false)
   }, [selected, refresh])
 
   const display = editing && draft ? draft : selected
-
-  const previewOpen = selectedId !== null || creating
-
-  const dismissPreview = useCallback(() => {
-    setConfirmDelete(false)
-    setCreating(false)
-    setEditing(false)
-    setSelectedId(null)
-    setDraft(null)
-  }, [])
-
-  useEffect(() => {
-    if (selectedId && !creating && !companies.some((c) => c.id === selectedId)) {
-      dismissPreview()
-    }
-  }, [selectedId, creating, companies, dismissPreview])
-
-  useEffect(() => {
-    if (!previewOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismissPreview()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [previewOpen, dismissPreview])
 
   useEffect(() => {
     if (!openRecordRequest) return
@@ -148,86 +122,77 @@ export default function CompaniesView(): React.ReactElement {
   const coInitial = (name: string) => (name.trim()[0] ?? '?').toUpperCase()
 
   return (
-    <div className="split-view split-view--browse">
-      <div className="list-column list-column--browse">
-        <div className="list-browse-scroll scroll-y">
-          <div className="list-results-sticky list-toolbar--search">
-            <div className="search-wrap">
-              <input
-                className="search-input focus-ring"
-                placeholder="Search company name, industry, site, notes…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Filter companies in this list"
-              />
-            </div>
-            <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
-              New company
-            </button>
+    <div className="split-view">
+      <div className="list-column">
+        <div className="list-toolbar list-toolbar--search">
+          <div className="search-wrap">
+            <input
+              className="search-input focus-ring"
+              placeholder="Search company name, industry, site, notes…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search companies"
+            />
           </div>
-          <div className="list-results-body">
-            {filtered.map((c) => {
-              const on = c.id === selectedId && !creating
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => open(c)}
-                  className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
-                >
-                  <div className="avatar avatar--sm">{coInitial(c.name)}</div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="list-row-title">{c.name}</div>
-                    <div className="list-row-sub">
-                      {c.industryId ? industryPathLabel(industryMap, c.industryId) : 'No industry linked'}
-                    </div>
+          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
+            New company
+          </button>
+        </div>
+        <div className="scroll-y list-rows">
+          {filtered.map((c) => {
+            const on = c.id === selectedId && !creating
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => open(c)}
+                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
+              >
+                <div className="avatar avatar--sm">{coInitial(c.name)}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="list-row-title">{c.name}</div>
+                  <div className="list-row-sub">
+                    {c.industryId ? industryPathLabel(industryMap, c.industryId) : 'No industry linked'}
                   </div>
-                </button>
-              )
-            })}
-            {filtered.length === 0 &&
-              (companies.length === 0 ? (
-                <div className="list-empty">
-                  <p className="list-empty-title">No companies yet</p>
-                  <p className="list-empty-text">Add orgs you work with, then tie them to people and sectors.</p>
                 </div>
-              ) : (
-                <div className="list-empty">
-                  <p className="list-empty-title">No results</p>
-                  <p className="list-empty-text">Nothing matches that search. Clear the field or try another term.</p>
-                </div>
-              ))}
-          </div>
+              </button>
+            )
+          })}
+          {filtered.length === 0 &&
+            (companies.length === 0 ? (
+              <div className="list-empty">
+                <p className="list-empty-title">No companies yet</p>
+                <p className="list-empty-text">Add orgs you work with, then tie them to people and sectors.</p>
+              </div>
+            ) : (
+              <div className="list-empty">
+                <p className="list-empty-title">No results</p>
+                <p className="list-empty-text">Nothing matches that search. Clear the field or try another term.</p>
+              </div>
+            ))}
         </div>
       </div>
 
-      {previewOpen && display && (
-        <>
-          <button
-            type="button"
-            className="detail-backdrop"
-            aria-label="Close preview"
-            onClick={dismissPreview}
-          />
-          <aside
-            className="detail-column detail-column--overlay"
-            aria-modal="true"
-            role="dialog"
-            aria-labelledby="company-preview-title"
-          >
-            <div className="detail-overlay-top">
-              <button type="button" className="detail-overlay-dismiss btn btn-ghost focus-ring" onClick={dismissPreview}>
-                Close
+      <div className="scroll-y detail-column">
+        {!display && (
+          <div className="empty-canvas">
+            <div className="empty-canvas-rule" aria-hidden />
+            <h2 className="empty-canvas-title">No company selected</h2>
+            <p className="empty-canvas-text">Pick from the list or add a company. One file per org.</p>
+            <div className="empty-canvas-actions">
+              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
+                New company
               </button>
             </div>
-            <div className="detail-inner scroll-y">
+          </div>
+        )}
+        {display && (
+          <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
                 <div className="avatar avatar--lg">{coInitial(display.name ?? '')}</div>
                 <div style={{ minWidth: 0 }}>
-                  <h2 id="company-preview-title" className="detail-title">
-                    {display.name || 'Untitled company'}
-                  </h2>
+                  <h2 className="detail-title">{display.name || 'Untitled company'}</h2>
                   <p className="detail-meta">{creating ? 'New entry' : 'Company JSON in your library'}</p>
                 </div>
               </div>
@@ -336,10 +301,9 @@ export default function CompaniesView(): React.ReactElement {
                 />
               </div>
             </div>
-            </div>
-          </aside>
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

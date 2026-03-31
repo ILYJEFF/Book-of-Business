@@ -131,7 +131,6 @@ export default function ContactsView(): React.ReactElement {
     await refresh({ background: true })
     setSelectedId(null)
     setDraft(null)
-    setCreating(false)
     setEditing(false)
     setConfirmDelete(false)
   }, [selected, refresh])
@@ -160,114 +159,81 @@ export default function ContactsView(): React.ReactElement {
 
   const displayDraft = editing && draft ? draft : selected
 
-  const previewOpen = selectedId !== null || creating
-
-  const dismissPreview = useCallback(() => {
-    setConfirmDelete(false)
-    setCreating(false)
-    setEditing(false)
-    setSelectedId(null)
-    setDraft(null)
-  }, [])
-
-  useEffect(() => {
-    if (selectedId && !creating && !contacts.some((c) => c.id === selectedId)) {
-      dismissPreview()
-    }
-  }, [selectedId, creating, contacts, dismissPreview])
-
-  useEffect(() => {
-    if (!previewOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismissPreview()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [previewOpen, dismissPreview])
-
   return (
-    <div className="split-view split-view--browse">
-      <div className="list-column list-column--browse">
-        <div className="list-browse-scroll scroll-y">
-          <div className="list-results-sticky list-toolbar--search">
-            <div className="search-wrap">
-              <input
-                className="search-input focus-ring"
-                placeholder="Search names, companies, titles, industries…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Filter contacts in this list"
-              />
-            </div>
-            <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
-              New contact
-            </button>
+    <div className="split-view">
+      <div className="list-column">
+        <div className="list-toolbar list-toolbar--search">
+          <div className="search-wrap">
+            <input
+              className="search-input focus-ring"
+              placeholder="Search names, companies, titles, industries…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search contacts"
+            />
           </div>
-          <div className="list-results-body">
-            {filtered.map((c) => {
-              const on = c.id === selectedId && !creating
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => openDetail(c)}
-                  className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
-                >
-                  <div className="avatar avatar--sm">{initials(c)}</div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="list-row-title">{contactDisplayName(c)}</div>
-                    <div className="list-row-sub">
-                      {c.title ||
-                        c.companyIds.map((id) => companyById(companyMap, id)).join(', ') ||
-                        'No title yet'}
-                    </div>
+          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
+            New contact
+          </button>
+        </div>
+        <div className="scroll-y list-rows">
+          {filtered.map((c) => {
+            const on = c.id === selectedId && !creating
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => openDetail(c)}
+                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
+              >
+                <div className="avatar avatar--sm">{initials(c)}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="list-row-title">{contactDisplayName(c)}</div>
+                  <div className="list-row-sub">
+                    {c.title ||
+                      c.companyIds.map((id) => companyById(companyMap, id)).join(', ') ||
+                      'No title yet'}
                   </div>
-                </button>
-              )
-            })}
-            {filtered.length === 0 &&
-              (contacts.length === 0 ? (
-                <div className="list-empty">
-                  <p className="list-empty-title">No contacts yet</p>
-                  <p className="list-empty-text">Your people will appear here as soon as you add the first one.</p>
                 </div>
-              ) : (
-                <div className="list-empty">
-                  <p className="list-empty-title">No results</p>
-                  <p className="list-empty-text">Nothing matches that search. Clear the field or try another name.</p>
-                </div>
-              ))}
-          </div>
+              </button>
+            )
+          })}
+          {filtered.length === 0 &&
+            (contacts.length === 0 ? (
+              <div className="list-empty">
+                <p className="list-empty-title">No contacts yet</p>
+                <p className="list-empty-text">Your people will appear here as soon as you add the first one.</p>
+              </div>
+            ) : (
+              <div className="list-empty">
+                <p className="list-empty-title">No results</p>
+                <p className="list-empty-text">Nothing matches that search. Clear the field or try another name.</p>
+              </div>
+            ))}
         </div>
       </div>
 
-      {previewOpen && displayDraft && (
-        <>
-          <button
-            type="button"
-            className="detail-backdrop"
-            aria-label="Close preview"
-            onClick={dismissPreview}
-          />
-          <aside
-            className="detail-column detail-column--overlay"
-            aria-modal="true"
-            role="dialog"
-            aria-labelledby="contact-preview-title"
-          >
-            <div className="detail-overlay-top">
-              <button type="button" className="detail-overlay-dismiss btn btn-ghost focus-ring" onClick={dismissPreview}>
-                Close
+      <div className="scroll-y detail-column">
+        {!displayDraft && !creating && (
+          <div className="empty-canvas">
+            <div className="empty-canvas-rule" aria-hidden />
+            <h2 className="empty-canvas-title">No row selected</h2>
+            <p className="empty-canvas-text">Open an entry from the list, or add one. Each person is one JSON file in your folder.</p>
+            <div className="empty-canvas-actions">
+              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
+                New contact
               </button>
+              <span className="empty-canvas-hint">Writes to disk when you save</span>
             </div>
-            <div className="detail-inner scroll-y">
+          </div>
+        )}
+        {displayDraft && (
+          <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
                 <div className="avatar avatar--lg">{initials(displayDraft as Contact)}</div>
                 <div style={{ minWidth: 0 }}>
-                  <h2 id="contact-preview-title" className="detail-title">
-                    {contactDisplayName(displayDraft as Contact)}
-                  </h2>
+                  <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
                   <p className="detail-meta">{creating ? 'New entry' : 'JSON file in your folder'}</p>
                 </div>
               </div>
@@ -455,10 +421,9 @@ export default function ContactsView(): React.ReactElement {
                 />
               </div>
             </div>
-            </div>
-          </aside>
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
