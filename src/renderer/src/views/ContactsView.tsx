@@ -145,32 +145,23 @@ export default function ContactsView(): React.ReactElement {
   const displayDraft = editing && draft ? draft : selected
 
   return (
-    <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-      <div
-        style={{
-          width: 340,
-          minWidth: 280,
-          borderRight: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--bg-raised)'
-        }}
-      >
-        <div style={{ padding: '16px 14px 12px', display: 'flex', gap: 8 }}>
-          <input
-            className="text-input focus-ring"
-            placeholder="Search people, companies, tags…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ flex: 1 }}
-          />
-        </div>
-        <div style={{ padding: '0 14px 12px' }}>
+    <div className="split-view">
+      <div className="list-column">
+        <div className="list-toolbar">
+          <div className="search-wrap">
+            <input
+              className="search-input focus-ring"
+              placeholder="Search names, companies, titles…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search contacts"
+            />
+          </div>
           <button type="button" className="btn btn-primary focus-ring" style={{ width: '100%' }} onClick={startCreate}>
             New contact
           </button>
         </div>
-        <div className="scroll-y" style={{ flex: 1 }}>
+        <div className="scroll-y list-rows">
           {filtered.map((c) => {
             const on = c.id === selectedId && !creating
             return (
@@ -178,43 +169,12 @@ export default function ContactsView(): React.ReactElement {
                 key={c.id}
                 type="button"
                 onClick={() => openDetail(c)}
-                className="focus-ring"
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  background: on ? 'var(--bg-panel)' : 'transparent',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  textAlign: 'left',
-                  color: 'var(--text-primary)'
-                }}
+                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
               >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: 'var(--accent-dim)',
-                    border: '1px solid rgba(138,180,212,0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'var(--accent)',
-                    flexShrink: 0
-                  }}
-                >
-                  {initials(c)}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {contactDisplayName(c)}
-                  </div>
-                  <div className="muted small" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div className="avatar avatar--sm">{initials(c)}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="list-row-title">{contactDisplayName(c)}</div>
+                  <div className="list-row-sub">
                     {c.title ||
                       c.companyIds.map((id) => companyById(companyMap, id)).join(', ') ||
                       'No title yet'}
@@ -231,41 +191,21 @@ export default function ContactsView(): React.ReactElement {
         </div>
       </div>
 
-      <div className="scroll-y" style={{ flex: 1, background: 'var(--bg-base)' }}>
+      <div className="scroll-y detail-column">
         {!displayDraft && !creating && (
-          <div className="muted" style={{ padding: 48, maxWidth: 420 }}>
-            Select a person on the left, or create a new contact.
-          </div>
+          <div className="empty-state">Select someone in the list, or create a new contact to start.</div>
         )}
         {displayDraft && (
-          <div style={{ padding: '28px 36px 48px', maxWidth: 720 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 14,
-                    background: 'var(--accent-dim)',
-                    border: '1px solid rgba(138,180,212,0.25)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: 'var(--accent)'
-                  }}
-                >
-                  {initials(displayDraft as Contact)}
-                </div>
-                <div>
-                  <div style={{ fontSize: 20, fontWeight: 600 }}>{contactDisplayName(displayDraft as Contact)}</div>
-                  <div className="muted small" style={{ marginTop: 4 }}>
-                    {creating ? 'New entry' : 'Saved on device as JSON'}
-                  </div>
+          <div className="detail-inner">
+            <header className="detail-hero">
+              <div className="detail-hero-main">
+                <div className="avatar avatar--lg">{initials(displayDraft as Contact)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
+                  <p className="detail-meta">{creating ? 'New entry' : 'Stored locally as JSON in your library'}</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <div className="detail-actions">
                 {!editing ? (
                   <>
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
@@ -286,23 +226,15 @@ export default function ContactsView(): React.ReactElement {
                   </>
                 )}
               </div>
-            </div>
+            </header>
 
             {confirmDelete && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: 16,
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(229,115,115,0.35)',
-                  background: 'rgba(229,115,115,0.06)'
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>Delete this contact?</div>
-                <div className="muted small" style={{ marginTop: 6 }}>
+              <div className="alert-danger">
+                <div className="alert-danger-title">Delete this contact?</div>
+                <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
                   The JSON file will be removed from your library folder.
-                </div>
-                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                </p>
+                <div className="alert-danger-actions">
                   <button type="button" className="btn btn-ghost focus-ring" onClick={() => setConfirmDelete(false)}>
                     Back
                   </button>
@@ -313,7 +245,7 @@ export default function ContactsView(): React.ReactElement {
               </div>
             )}
 
-            <div style={{ marginTop: 28, display: 'grid', gap: 20 }}>
+            <div className="form-grid">
               <div>
                 <span className="field-label">Relationship</span>
                 <CategoryPills
@@ -323,7 +255,7 @@ export default function ContactsView(): React.ReactElement {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="form-row-2">
                 <div>
                   <label className="field-label" htmlFor="fn">
                     First name
@@ -364,7 +296,7 @@ export default function ContactsView(): React.ReactElement {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="form-row-2">
                 <div>
                   <label className="field-label" htmlFor="li">
                     LinkedIn
@@ -475,11 +407,11 @@ function EmailsBlock({
   return (
     <div>
       <span className="field-label">Email addresses</span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="stack-8">
         {list.map((em, idx) => (
-          <div key={idx} style={{ display: 'flex', gap: 8 }}>
+          <div key={idx} className="stack-8-row">
             <input
-              className="text-input focus-ring"
+              className="text-input focus-ring flex-1"
               disabled={!editing}
               placeholder="name@company.com"
               value={em}
@@ -497,8 +429,7 @@ function EmailsBlock({
             {editing && (
               <button
                 type="button"
-                className="btn btn-ghost focus-ring"
-                style={{ flexShrink: 0 }}
+                className="btn btn-ghost focus-ring shrink-0"
                 onClick={() =>
                   setDraft((d) => {
                     if (!d) return d
@@ -516,8 +447,7 @@ function EmailsBlock({
         {editing && (
           <button
             type="button"
-            className="btn btn-ghost focus-ring"
-            style={{ alignSelf: 'flex-start' }}
+            className="btn btn-ghost focus-ring align-start"
             onClick={() => setDraft((d) => (d ? { ...d, emails: [...(d.emails ?? []), ''] } : d))}
           >
             Add email
@@ -550,12 +480,11 @@ function PhonesBlock({
   return (
     <div>
       <span className="field-label">Phone numbers</span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="stack-8">
         {list.map((p, idx) => (
-          <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div key={idx} className="stack-8-row">
             <input
-              className="text-input focus-ring"
-              style={{ maxWidth: 120 }}
+              className="text-input focus-ring input-narrow"
               disabled={!editing}
               placeholder="Label"
               value={p.label}
@@ -570,8 +499,7 @@ function PhonesBlock({
               }}
             />
             <input
-              className="text-input focus-ring"
-              style={{ flex: 1 }}
+              className="text-input focus-ring flex-1"
               disabled={!editing}
               placeholder="+1 …"
               value={p.value}
@@ -588,7 +516,7 @@ function PhonesBlock({
             {editing && (
               <button
                 type="button"
-                className="btn btn-ghost focus-ring"
+                className="btn btn-ghost focus-ring shrink-0"
                 onClick={() =>
                   setDraft((d) => {
                     if (!d) return d
@@ -606,8 +534,7 @@ function PhonesBlock({
         {editing && (
           <button
             type="button"
-            className="btn btn-ghost focus-ring"
-            style={{ alignSelf: 'flex-start' }}
+            className="btn btn-ghost focus-ring align-start"
             onClick={() =>
               setDraft((d) =>
                 d ? { ...d, phones: [...(d.phones ?? []), { label: 'Work', value: '' }] } : d
@@ -644,39 +571,22 @@ function MultiPick({
       {options.length === 0 ? (
         <div className="muted small">{empty}</div>
       ) : (
-        <div
-          className="scroll-y"
-          style={{
-            maxHeight: 180,
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-raised)',
-            padding: 8
-          }}
-        >
+        <div className="scroll-y pick-scroll">
           {options.map((o) => {
             const on = set.has(o.id)
             return (
               <label
                 key={o.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  cursor: disabled ? 'default' : 'pointer',
-                  opacity: disabled ? 0.7 : 1
-                }}
+                className="pick-row"
+                style={{ cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.65 : 1 }}
               >
                 <input
                   type="checkbox"
                   disabled={disabled}
                   checked={on}
                   onChange={(e) => onToggle(o.id, e.target.checked)}
-                  style={{ accentColor: 'var(--accent)' }}
                 />
-                <span style={{ fontSize: 14 }}>{'name' in o ? o.name : (o as Industry).name}</span>
+                <span>{'name' in o ? o.name : (o as Industry).name}</span>
               </label>
             )
           })}

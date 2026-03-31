@@ -92,24 +92,17 @@ export default function CompaniesView(): React.ReactElement {
 
   const display = editing && draft ? draft : selected
 
+  const coInitial = (name: string) => (name.trim()[0] ?? '?').toUpperCase()
+
   return (
-    <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-      <div
-        style={{
-          width: 320,
-          minWidth: 260,
-          borderRight: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--bg-raised)'
-        }}
-      >
-        <div style={{ padding: 14 }}>
+    <div className="split-view">
+      <div className="list-column">
+        <div className="list-toolbar">
           <button type="button" className="btn btn-primary focus-ring" style={{ width: '100%' }} onClick={startCreate}>
             New company
           </button>
         </div>
-        <div className="scroll-y" style={{ flex: 1 }}>
+        <div className="scroll-y list-rows">
           {companies.map((c) => {
             const on = c.id === selectedId && !creating
             return (
@@ -117,20 +110,14 @@ export default function CompaniesView(): React.ReactElement {
                 key={c.id}
                 type="button"
                 onClick={() => open(c)}
-                className="focus-ring"
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  background: on ? 'var(--bg-panel)' : 'transparent',
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  color: 'var(--text-primary)'
-                }}
+                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
               >
-                <div style={{ fontWeight: 600 }}>{c.name}</div>
-                <div className="muted small" style={{ marginTop: 4 }}>
-                  {c.industryId ? industryMap.get(c.industryId) ?? 'Industry' : 'No industry linked'}
+                <div className="avatar avatar--sm">{coInitial(c.name)}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="list-row-title">{c.name}</div>
+                  <div className="list-row-sub">
+                    {c.industryId ? industryMap.get(c.industryId) ?? 'Industry' : 'No industry linked'}
+                  </div>
                 </div>
               </button>
             )
@@ -143,22 +130,19 @@ export default function CompaniesView(): React.ReactElement {
         </div>
       </div>
 
-      <div className="scroll-y" style={{ flex: 1, background: 'var(--bg-base)' }}>
-        {!display && (
-          <div className="muted" style={{ padding: 48 }}>
-            Select a company or create a new one.
-          </div>
-        )}
+      <div className="scroll-y detail-column">
+        {!display && <div className="empty-state">Select a company in the list, or create a new record.</div>}
         {display && (
-          <div style={{ padding: '28px 36px 48px', maxWidth: 640 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 600 }}>{display.name || 'Untitled company'}</div>
-                <div className="muted small" style={{ marginTop: 6 }}>
-                  {creating ? 'New entry' : 'Company record on disk'}
+          <div className="detail-inner">
+            <header className="detail-hero">
+              <div className="detail-hero-main">
+                <div className="avatar avatar--lg">{coInitial(display.name ?? '')}</div>
+                <div style={{ minWidth: 0 }}>
+                  <h2 className="detail-title">{display.name || 'Untitled company'}</h2>
+                  <p className="detail-meta">{creating ? 'New entry' : 'Company JSON in your library'}</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <div className="detail-actions">
                 {!editing ? (
                   <>
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
@@ -179,23 +163,15 @@ export default function CompaniesView(): React.ReactElement {
                   </>
                 )}
               </div>
-            </div>
+            </header>
 
             {confirmDelete && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: 16,
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(229,115,115,0.35)',
-                  background: 'rgba(229,115,115,0.06)'
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>Delete this company?</div>
-                <div className="muted small" style={{ marginTop: 6 }}>
-                  Contacts can still list this name until you edit them. Files are removed from the companies folder.
-                </div>
-                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <div className="alert-danger">
+                <div className="alert-danger-title">Delete this company?</div>
+                <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
+                  Contacts may still reference this id until you edit them. The file is removed from the companies folder.
+                </p>
+                <div className="alert-danger-actions">
                   <button type="button" className="btn btn-ghost focus-ring" onClick={() => setConfirmDelete(false)}>
                     Back
                   </button>
@@ -206,7 +182,7 @@ export default function CompaniesView(): React.ReactElement {
               </div>
             )}
 
-            <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+            <div className="form-grid" style={{ marginTop: confirmDelete ? 22 : 0 }}>
               <div>
                 <label className="field-label" htmlFor="co-name">
                   Company name

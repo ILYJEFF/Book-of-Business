@@ -1,10 +1,11 @@
 import { useApp } from '../context/AppContext'
+import { IconBuilding, IconContacts, IconLayers, IconLibrary } from './NavIcons'
 
 const items = [
-  { id: 'contacts' as const, label: 'Contacts', hint: 'People' },
-  { id: 'companies' as const, label: 'Companies', hint: 'Orgs' },
-  { id: 'industries' as const, label: 'Industries', hint: 'Sectors' },
-  { id: 'settings' as const, label: 'Library', hint: 'Data' }
+  { id: 'contacts' as const, label: 'Contacts', hint: 'People you know', Icon: IconContacts },
+  { id: 'companies' as const, label: 'Companies', hint: 'Organizations', Icon: IconBuilding },
+  { id: 'industries' as const, label: 'Industries', hint: 'Sectors & markets', Icon: IconLayers },
+  { id: 'settings' as const, label: 'Library', hint: 'Folder & sync', Icon: IconLibrary }
 ]
 
 export default function Sidebar(): React.ReactElement {
@@ -17,93 +18,42 @@ export default function Sidebar(): React.ReactElement {
   }
 
   return (
-    <aside
-      style={{
-        width: 232,
-        minWidth: 232,
-        borderRight: '1px solid var(--border-subtle)',
-        background: 'linear-gradient(180deg, var(--bg-raised) 0%, var(--bg-base) 55%)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '20px 14px 16px'
-      }}
-    >
-      <div style={{ padding: '4px 10px 20px' }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)'
-          }}
-        >
-          Book of Business
-        </div>
-        <div style={{ marginTop: 6, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em' }}>
-          Your network
-        </div>
-        <div className="muted small" style={{ marginTop: 4 }}>
-          Local files you control
-        </div>
+    <aside className="sidebar">
+      <div>
+        <div className="sidebar-brand-mark" aria-hidden />
+        <div className="sidebar-brand-kicker">Book of Business</div>
+        <div className="sidebar-brand-title">Command center</div>
+        <p className="sidebar-brand-sub">Your relationships, stored as files you own.</p>
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+      <nav className="sidebar-nav" aria-label="Primary">
         {items.map((it) => {
           const active = section === it.id
           return (
             <button
               key={it.id}
               type="button"
-              className="focus-ring"
+              className={`sidebar-item focus-ring${active ? ' sidebar-item--active' : ''}`}
               onClick={() => setSection(it.id)}
-              style={{
-                textAlign: 'left',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                padding: '11px 12px',
-                background: active ? 'var(--bg-panel)' : 'transparent',
-                color: 'var(--text-primary)',
-                boxShadow: active ? 'inset 0 0 0 1px var(--border-subtle)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10
-              }}
             >
-              <span>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{it.label}</span>
-                <span className="muted small" style={{ marginLeft: 8 }}>
-                  {it.hint}
-                </span>
+              <span className="sidebar-item-icon">
+                <it.Icon />
+              </span>
+              <span className="sidebar-item-body">
+                <span className="sidebar-item-label">{it.label}</span>
+                <span className="sidebar-item-hint">{it.hint}</span>
               </span>
               {it.id !== 'settings' && (
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: active ? 'var(--accent)' : 'var(--text-muted)',
-                    fontVariantNumeric: 'tabular-nums'
-                  }}
-                >
-                  {counts[it.id] ?? 0}
-                </span>
+                <span className="sidebar-item-count">{counts[it.id] ?? 0}</span>
               )}
             </button>
           )
         })}
       </nav>
 
-      <div
-        className="muted small"
-        style={{
-          padding: '12px 10px 0',
-          borderTop: '1px solid var(--border-subtle)',
-          lineHeight: 1.5
-        }}
-      >
-        Plain JSON on disk. Put the folder inside iCloud Drive or OneDrive to sync.
-      </div>
+      <p className="sidebar-foot">
+        Plain JSON on disk. Drop the folder into iCloud or OneDrive if you want it everywhere.
+      </p>
     </aside>
   )
 }

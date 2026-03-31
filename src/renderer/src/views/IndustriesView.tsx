@@ -85,48 +85,36 @@ export default function IndustriesView(): React.ReactElement {
 
   const display = editing && draft ? draft : selected
 
+  const indInitial = (name: string) => (name.trim()[0] ?? '?').toUpperCase()
+
   return (
-    <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-      <div
-        style={{
-          width: 300,
-          minWidth: 240,
-          borderRight: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--bg-raised)'
-        }}
-      >
-        <div style={{ padding: 14 }}>
+    <div className="split-view">
+      <div className="list-column">
+        <div className="list-toolbar">
           <button type="button" className="btn btn-primary focus-ring" style={{ width: '100%' }} onClick={startCreate}>
             New industry
           </button>
         </div>
-        <div className="scroll-y" style={{ flex: 1 }}>
+        <div className="scroll-y list-rows">
           {industries.map((i) => {
             const on = i.id === selectedId && !creating
+            const desc = i.description
+              ? i.description.length > 88
+                ? `${i.description.slice(0, 88)}…`
+                : i.description
+              : 'No description yet'
             return (
               <button
                 key={i.id}
                 type="button"
                 onClick={() => open(i)}
-                className="focus-ring"
-                style={{
-                  width: '100%',
-                  border: 'none',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  background: on ? 'var(--bg-panel)' : 'transparent',
-                  padding: '12px 16px',
-                  textAlign: 'left',
-                  color: 'var(--text-primary)'
-                }}
+                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
               >
-                <div style={{ fontWeight: 600 }}>{i.name}</div>
-                {i.description && (
-                  <div className="muted small" style={{ marginTop: 4, lineHeight: 1.4 }}>
-                    {i.description.length > 90 ? `${i.description.slice(0, 90)}…` : i.description}
-                  </div>
-                )}
+                <div className="avatar avatar--sm">{indInitial(i.name)}</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="list-row-title">{i.name}</div>
+                  <div className="list-row-sub">{desc}</div>
+                </div>
               </button>
             )
           })}
@@ -138,22 +126,19 @@ export default function IndustriesView(): React.ReactElement {
         </div>
       </div>
 
-      <div className="scroll-y" style={{ flex: 1, background: 'var(--bg-base)' }}>
-        {!display && (
-          <div className="muted" style={{ padding: 48 }}>
-            Select an industry or add a new one.
-          </div>
-        )}
+      <div className="scroll-y detail-column">
+        {!display && <div className="empty-state">Pick an industry from the list, or create a new one.</div>}
         {display && (
-          <div style={{ padding: '28px 36px 48px', maxWidth: 600 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 600 }}>{display.name || 'Untitled industry'}</div>
-                <div className="muted small" style={{ marginTop: 6 }}>
-                  {creating ? 'New entry' : 'Industry taxonomy on disk'}
+          <div className="detail-inner">
+            <header className="detail-hero">
+              <div className="detail-hero-main">
+                <div className="avatar avatar--lg">{indInitial(display.name ?? '')}</div>
+                <div style={{ minWidth: 0 }}>
+                  <h2 className="detail-title">{display.name || 'Untitled industry'}</h2>
+                  <p className="detail-meta">{creating ? 'New entry' : 'Industry JSON in your library'}</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <div className="detail-actions">
                 {!editing ? (
                   <>
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
@@ -174,23 +159,15 @@ export default function IndustriesView(): React.ReactElement {
                   </>
                 )}
               </div>
-            </div>
+            </header>
 
             {confirmDelete && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: 16,
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(229,115,115,0.35)',
-                  background: 'rgba(229,115,115,0.06)'
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>Delete this industry?</div>
-                <div className="muted small" style={{ marginTop: 6 }}>
+              <div className="alert-danger">
+                <div className="alert-danger-title">Delete this industry?</div>
+                <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
                   Companies and contacts may still reference this id until you edit them.
-                </div>
-                <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                </p>
+                <div className="alert-danger-actions">
                   <button type="button" className="btn btn-ghost focus-ring" onClick={() => setConfirmDelete(false)}>
                     Back
                   </button>
@@ -201,7 +178,7 @@ export default function IndustriesView(): React.ReactElement {
               </div>
             )}
 
-            <div style={{ marginTop: 28, display: 'grid', gap: 18 }}>
+            <div className="form-grid" style={{ marginTop: confirmDelete ? 22 : 0 }}>
               <div>
                 <label className="field-label" htmlFor="ind-name">
                   Name

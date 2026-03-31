@@ -6,38 +6,18 @@ export default function SettingsView(): React.ReactElement {
   const [showClear, setShowClear] = useState(false)
 
   return (
-    <div className="scroll-y" style={{ flex: 1, padding: '32px 40px 48px' }}>
-      <div style={{ maxWidth: 560 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Your library</h2>
-        <p className="muted" style={{ marginTop: 10, lineHeight: 1.65 }}>
-          Data never leaves this folder unless you put the folder in a synced drive. Each record is a small JSON file
-          you can inspect, diff, or archive with any tool.
+    <div className="scroll-y settings-page">
+      <div className="settings-inner">
+        <h2 className="settings-title">Your library</h2>
+        <p className="muted" style={{ marginTop: 12, lineHeight: 1.65, fontSize: 15 }}>
+          Data stays in the folder you choose. Each record is a small JSON file you can inspect, diff, or archive with
+          any tool.
         </p>
 
-        <div
-          style={{
-            marginTop: 28,
-            padding: 20,
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-panel)',
-            boxShadow: '0 0 0 1px rgba(255,255,255,0.02) inset'
-          }}
-        >
+        <div className="settings-card">
           <div className="field-label">Active folder</div>
-          <div
-            style={{
-              marginTop: 8,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 12,
-              color: 'var(--text-secondary)',
-              wordBreak: 'break-all',
-              lineHeight: 1.5
-            }}
-          >
-            {workspacePath ?? 'No folder selected'}
-          </div>
-          <div style={{ marginTop: 18, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <div className="settings-path">{workspacePath ?? 'No folder selected'}</div>
+          <div className="settings-actions">
             <button type="button" className="btn btn-primary focus-ring" onClick={() => void chooseWorkspace()}>
               Choose folder
             </button>
@@ -55,70 +35,38 @@ export default function SettingsView(): React.ReactElement {
           </div>
         </div>
 
-        <div style={{ marginTop: 28 }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Cloud sync</h3>
+        <div className="settings-section">
+          <h3 className="settings-h3">Cloud sync</h3>
           <p className="muted small" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            On macOS, pick a folder inside iCloud Drive. On Windows, pick a folder inside OneDrive. The app only reads
-            and writes files in that tree. Conflict behavior follows your sync provider if two machines edit the same
-            file at once, so favor editing on one device at a time for the same person.
+            On macOS, use a folder inside iCloud Drive. On Windows, use OneDrive. The app only touches files in that
+            tree. If two devices edit the same file at once, your sync provider decides how to merge, so avoid parallel
+            edits on the same person when possible.
           </p>
         </div>
 
-        <div style={{ marginTop: 24 }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>On-disk layout</h3>
-          <pre
-            className="small"
-            style={{
-              marginTop: 12,
-              padding: 16,
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-raised)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-secondary)',
-              overflow: 'auto',
-              lineHeight: 1.5
-            }}
-          >
-{`your-library/
+        <div className="settings-section">
+          <h3 className="settings-h3">On-disk layout</h3>
+          <pre className="code-block">{`your-library/
   manifest.json
   industries/
     <id>.json
   companies/
     <id>.json
   contacts/
-    <id>.json`}
-          </pre>
+    <id>.json`}</pre>
         </div>
       </div>
 
       {showClear && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-            zIndex: 50
-          }}
-        >
-          <div
-            style={{
-              width: 'min(440px, 100%)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-panel)',
-              padding: 24,
-              boxShadow: 'var(--shadow-soft)'
-            }}
-          >
-            <div style={{ fontWeight: 600, fontSize: 16 }}>Disconnect this folder?</div>
-            <p className="muted small" style={{ marginTop: 10, lineHeight: 1.6 }}>
-              Your files stay on disk. The app only forgets the path on this computer until you choose a folder again.
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="disconnect-title">
+          <div className="modal-panel">
+            <div id="disconnect-title" style={{ fontWeight: 650, fontSize: 16, letterSpacing: '-0.02em' }}>
+              Disconnect this folder?
+            </div>
+            <p className="muted small" style={{ marginTop: 12, lineHeight: 1.6, marginBottom: 0 }}>
+              Your files stay on disk. This device only forgets the path until you pick a folder again.
             </p>
-            <div style={{ marginTop: 18, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button type="button" className="btn btn-ghost focus-ring" onClick={() => setShowClear(false)}>
                 Cancel
               </button>

@@ -11,29 +11,25 @@ function Shell(): React.ReactElement {
 
   if (loading) {
     return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-muted)',
-          fontSize: 13
-        }}
-      >
-        Opening library…
+      <div className="loading-screen">
+        <div className="loading-orb" aria-hidden />
+        <span>Loading library…</span>
       </div>
     )
   }
 
   if (!workspacePath) {
-    return <WorkspaceSetup />
+    return (
+      <div style={{ height: '100%', minHeight: 0 }}>
+        <WorkspaceSetup />
+      </div>
+    )
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', minHeight: 0 }}>
+    <div className="app-shell">
       <Sidebar />
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <main className="app-main">
         {section === 'contacts' && <ContactsView />}
         {section === 'companies' && <CompaniesView />}
         {section === 'industries' && <IndustriesView />}
