@@ -3,7 +3,8 @@ import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
-import { contactDisplayName, companyById, industryById, initials } from '../lib/format'
+import { contactDisplayName, companyById, industryPathLabel, initials } from '../lib/format'
+import { orderIndustriesForUi } from '../lib/industryTree'
 
 function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
   return {
@@ -41,6 +42,11 @@ export default function ContactsView(): React.ReactElement {
     [industries]
   )
 
+  const industriesOrdered = useMemo(
+    () => orderIndustriesForUi(industries).map((x) => x.industry),
+    [industries]
+  )
+
   const selected = useMemo(
     () => contacts.find((c) => c.id === selectedId) ?? null,
     [contacts, selectedId]
@@ -57,7 +63,7 @@ export default function ContactsView(): React.ReactElement {
         ...(c.emails ?? []),
         ...(c.phones?.map((p) => p.value) ?? []),
         ...c.companyIds.map((id) => companyById(companyMap, id)),
-        ...c.industryIds.map((id) => industryById(industryMap, id)),
+        ...c.industryIds.map((id) => industryPathLabel(industryMap, id)),
         c.address
       ]
         .join(' ')
@@ -382,7 +388,8 @@ export default function ContactsView(): React.ReactElement {
               <MultiPick
                 label="Industries"
                 empty="Add industries in the Industries tab first."
-                options={industries}
+                options={industriesOrdered}
+                getOptionLabel={(o) => industryPathLabel(industryMap, (o as Industry).id)}
                 selectedIds={displayDraft.industryIds ?? []}
                 disabled={!editing}
                 onToggle={(id, on) => {
@@ -586,6 +593,7 @@ function MultiPick({
   label,
   empty,
   options,
+  getOptionLabel,
   selectedIds,
   disabled,
   onToggle
@@ -593,6 +601,7 @@ function MultiPick({
   label: string
   empty: string
   options: Company[] | Industry[]
+  getOptionLabel?: (o: Company | Industry) => string
   selectedIds: string[]
   disabled: boolean
   onToggle: (id: string, on: boolean) => void
@@ -607,6 +616,7 @@ function MultiPick({
         <div className="scroll-y pick-scroll">
           {options.map((o) => {
             const on = set.has(o.id)
+            const text = getOptionLabel ? getOptionLabel(o) : o.name
             return (
               <label
                 key={o.id}
@@ -619,7 +629,7 @@ function MultiPick({
                   checked={on}
                   onChange={(e) => onToggle(o.id, e.target.checked)}
                 />
-                <span>{'name' in o ? o.name : (o as Industry).name}</span>
+                <span>{text}</span>
               </label>
             )
           })}

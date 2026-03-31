@@ -8,6 +8,8 @@ export interface PhoneEntry {
 export interface Industry {
   id: string
   name: string
+  /** Parent sector; omit for a top-level industry */
+  parentId?: string
   description?: string
   createdAt: string
   updatedAt: string

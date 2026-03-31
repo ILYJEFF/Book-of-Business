@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company } from '../../../shared/types'
 import AddressFields from '../components/AddressFields'
 import { useApp } from '../context/AppContext'
+import { industryPathLabel } from '../lib/format'
+import { orderIndustriesForUi } from '../lib/industryTree'
 
 export default function CompaniesView(): React.ReactElement {
   const { companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
@@ -13,9 +15,11 @@ export default function CompaniesView(): React.ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const industryMap = useMemo(
-    () => new Map(industries.map((i) => [i.id, i.name] as const)),
+    () => new Map(industries.map((i) => [i.id, i] as const)),
     [industries]
   )
+
+  const industriesOrdered = useMemo(() => orderIndustriesForUi(industries), [industries])
 
   const selected = useMemo(
     () => companies.find((c) => c.id === selectedId) ?? null,
@@ -128,7 +132,7 @@ export default function CompaniesView(): React.ReactElement {
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="list-row-title">{c.name}</div>
                   <div className="list-row-sub">
-                    {c.industryId ? industryMap.get(c.industryId) ?? 'Industry' : 'No industry linked'}
+                    {c.industryId ? industryPathLabel(industryMap, c.industryId) : 'No industry linked'}
                   </div>
                 </div>
               </button>
@@ -249,9 +253,9 @@ export default function CompaniesView(): React.ReactElement {
                   }
                 >
                   <option value="">None</option>
-                  {industries.map((i) => (
+                  {industriesOrdered.map(({ industry: i }) => (
                     <option key={i.id} value={i.id}>
-                      {i.name}
+                      {industryPathLabel(industryMap, i.id)}
                     </option>
                   ))}
                 </select>

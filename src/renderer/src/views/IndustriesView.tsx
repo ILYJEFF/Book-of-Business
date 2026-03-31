@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
+import { industryPathLabel } from '../lib/format'
+import { excludedParentIds, orderIndustriesForUi } from '../lib/industryTree'
 
 export default function IndustriesView(): React.ReactElement {
   const { industries, refresh } = useApp()
@@ -10,11 +12,24 @@ export default function IndustriesView(): React.ReactElement {
   const [draft, setDraft] = useState<Partial<Industry> | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const industryMap = useMemo(
+    () => new Map(industries.map((i) => [i.id, i] as const)),
+    [industries]
+  )
+
+  const ordered = useMemo(() => orderIndustriesForUi(industries), [industries])
 
   const selected = useMemo(
     () => industries.find((i) => i.id === selectedId) ?? null,
     [industries, selectedId]
   )
+
+  const parentOptions = useMemo(() => {
+    const ex = excludedParentIds(industries, draft?.id)
+    return industries.filter((i) => !ex.has(i.id)).sort((a, b) => a.name.localeCompare(b.name))
+  }, [industries, draft?.id])
 
   const open = useCallback((i: Industry) => {
     setSelectedId(i.id)
@@ -22,14 +37,16 @@ export default function IndustriesView(): React.ReactElement {
     setEditing(false)
     setDraft({ ...i })
     setConfirmDelete(false)
+    setDeleteError(null)
   }, [])
 
-  const startCreate = useCallback(() => {
+  const startCreate = useCallback((parentId?: string) => {
     setSelectedId(null)
     setCreating(true)
     setEditing(true)
-    setDraft({ name: '', description: '' })
+    setDraft({ name: '', description: '', parentId: parentId || undefined })
     setConfirmDelete(false)
+    setDeleteError(null)
   }, [])
 
   const startEdit = useCallback((i: Industry) => {
@@ -38,6 +55,7 @@ export default function IndustriesView(): React.ReactElement {
     setEditing(true)
     setDraft({ ...i })
     setConfirmDelete(false)
+    setDeleteError(null)
   }, [])
 
   const cancelEdit = useCallback(() => {
@@ -60,7 +78,8 @@ export default function IndustriesView(): React.ReactElement {
       const saved = await window.book.saveIndustry({
         ...draft,
         name: draft.name.trim(),
-        description: draft.description?.trim() || undefined
+        description: draft.description?.trim() || undefined,
+        parentId: draft.parentId?.trim() || undefined
       })
       await refresh()
       setSelectedId(saved.id)
@@ -75,12 +94,21 @@ export default function IndustriesView(): React.ReactElement {
 
   const remove = useCallback(async () => {
     if (!selected) return
-    await window.book.deleteIndustry(selected.id)
-    await refresh()
-    setSelectedId(null)
-    setDraft(null)
-    setEditing(false)
-    setConfirmDelete(false)
+    setDeleteError(null)
+    try {
+      await window.book.deleteIndustry(selected.id)
+      await refresh()
+      setSelectedId(null)
+      setDraft(null)
+      setEditing(false)
+      setConfirmDelete(false)
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.message === 'INDUSTRY_HAS_CHILDREN'
+          ? 'Move or delete sub-industries first, then try again.'
+          : 'Could not delete this industry.'
+      setDeleteError(msg)
+    }
   }, [selected, refresh])
 
   const display = editing && draft ? draft : selected
@@ -89,28 +117,29 @@ export default function IndustriesView(): React.ReactElement {
 
   return (
     <div className="split-view">
-      <div className="list-column">
+      <div className="list-column list-column--industries">
         <div className="list-toolbar">
-          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
-            New industry
+          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={() => startCreate()}>
+            New top-level industry
           </button>
         </div>
         <div className="scroll-y list-rows">
-          {industries.map((i) => {
+          {ordered.map(({ industry: i, depth }) => {
             const on = i.id === selectedId && !creating
             const desc = i.description
-              ? i.description.length > 88
-                ? `${i.description.slice(0, 88)}…`
+              ? i.description.length > 72
+                ? `${i.description.slice(0, 72)}…`
                 : i.description
-              : 'No description yet'
+              : 'No description'
             return (
               <button
                 key={i.id}
                 type="button"
                 onClick={() => open(i)}
-                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
+                className={`list-row list-row--industry-child focus-ring${on ? ' list-row--active' : ''}`}
+                style={{ paddingLeft: 16 + depth * 18 }}
               >
-                <div className="avatar avatar--sm">{indInitial(i.name)}</div>
+                <div className="avatar avatar--sm avatar--industry">{indInitial(i.name)}</div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="list-row-title">{i.name}</div>
                   <div className="list-row-sub">{desc}</div>
@@ -121,7 +150,7 @@ export default function IndustriesView(): React.ReactElement {
           {industries.length === 0 && (
             <div className="list-empty">
               <p className="list-empty-title">No industries yet</p>
-              <p className="list-empty-text">Define a few sectors you care about, then link companies and contacts.</p>
+              <p className="list-empty-text">Start with a few top-level sectors. You can nest specialties underneath.</p>
             </div>
           )}
         </div>
@@ -130,12 +159,13 @@ export default function IndustriesView(): React.ReactElement {
       <div className="scroll-y detail-column">
         {!display && (
           <div className="empty-canvas">
+            <p className="folio-kicker">Industries</p>
             <div className="empty-canvas-rule" aria-hidden />
-            <h2 className="empty-canvas-title">No industry selected</h2>
-            <p className="empty-canvas-text">Select a sector from the list or create one.</p>
+            <h2 className="empty-canvas-title">Nothing selected</h2>
+            <p className="empty-canvas-text">Choose a row in the index or add a sector.</p>
             <div className="empty-canvas-actions">
-              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
-                New industry
+              <button type="button" className="btn btn-primary focus-ring" onClick={() => startCreate()}>
+                New top-level industry
               </button>
             </div>
           </div>
@@ -144,19 +174,40 @@ export default function IndustriesView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                <div className="avatar avatar--lg">{indInitial(display.name ?? '')}</div>
+                <div className="avatar avatar--lg avatar--industry">{indInitial(display.name ?? '')}</div>
                 <div style={{ minWidth: 0 }}>
-                  <h2 className="detail-title">{display.name || 'Untitled industry'}</h2>
-                  <p className="detail-meta">{creating ? 'New entry' : 'Industry JSON in your library'}</p>
+                  <p className="folio-kicker folio-kicker--inline">Industry</p>
+                  <h2 className="detail-title">{display.name || 'Untitled'}</h2>
+                  <p className="detail-meta">
+                    {creating
+                      ? 'New entry'
+                      : display.parentId
+                        ? `Under ${industryPathLabel(industryMap, display.parentId)}`
+                        : 'Top-level sector'}
+                  </p>
                 </div>
               </div>
               <div className="detail-actions">
                 {!editing ? (
                   <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost focus-ring"
+                      onClick={() => selected && startCreate(selected.id)}
+                    >
+                      Add sub-industry
+                    </button>
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
                       Edit
                     </button>
-                    <button type="button" className="btn btn-danger focus-ring" onClick={() => setConfirmDelete(true)}>
+                    <button
+                      type="button"
+                      className="btn btn-danger focus-ring"
+                      onClick={() => {
+                        setDeleteError(null)
+                        setConfirmDelete(true)
+                      }}
+                    >
                       Delete
                     </button>
                   </>
@@ -176,9 +227,13 @@ export default function IndustriesView(): React.ReactElement {
             {confirmDelete && (
               <div className="alert-danger">
                 <div className="alert-danger-title">Delete this industry?</div>
-                <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-                  Companies and contacts may still reference this id until you edit them.
-                </p>
+                {deleteError && <p className="muted small" style={{ marginTop: 8 }}>{deleteError}</p>}
+                {!deleteError && (
+                  <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
+                    Companies and contacts may still reference this id until you edit them. Sub-industries must be removed or
+                    reassigned first.
+                  </p>
+                )}
                 <div className="alert-danger-actions">
                   <button type="button" className="btn btn-ghost focus-ring" onClick={() => setConfirmDelete(false)}>
                     Back
@@ -204,6 +259,35 @@ export default function IndustriesView(): React.ReactElement {
                 />
               </div>
               <div>
+                <label className="field-label" htmlFor="ind-parent">
+                  Parent industry
+                </label>
+                <select
+                  id="ind-parent"
+                  className="select-input focus-ring"
+                  disabled={!editing}
+                  value={display.parentId ?? ''}
+                  onChange={(e) =>
+                    editing &&
+                    setDraft((d) =>
+                      d
+                        ? {
+                            ...d,
+                            parentId: e.target.value ? e.target.value : undefined
+                          }
+                        : d
+                    )
+                  }
+                >
+                  <option value="">Top level (no parent)</option>
+                  {parentOptions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {industryPathLabel(industryMap, p.id)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="field-label" htmlFor="ind-desc">
                   Description
                 </label>
@@ -211,7 +295,7 @@ export default function IndustriesView(): React.ReactElement {
                   id="ind-desc"
                   className="textarea-input focus-ring"
                   disabled={!editing}
-                  placeholder="How you think about this space, subsegments, notes…"
+                  placeholder="How you think about this space, segments you track inside it…"
                   value={display.description ?? ''}
                   onChange={(e) => editing && setDraft((d) => (d ? { ...d, description: e.target.value } : d))}
                 />

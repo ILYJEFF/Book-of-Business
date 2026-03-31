@@ -73,10 +73,25 @@ function readJsonDir<T>(dir: string): T[] {
   return out
 }
 
+function wouldCreateIndustryCycle(
+  all: Industry[],
+  industryId: string,
+  newParentId: string
+): boolean {
+  const byId = new Map(all.map((i) => [i.id, i] as const))
+  let walk: string | undefined = newParentId
+  const seen = new Set<string>()
+  while (walk) {
+    if (walk === industryId) return true
+    if (seen.has(walk)) break
+    seen.add(walk)
+    walk = byId.get(walk)?.parentId
+  }
+  return false
+}
+
 export function listIndustries(root: string): Industry[] {
-  return readJsonDir<Industry>(join(root, 'industries')).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  )
+  return readJsonDir<Industry>(join(root, 'industries'))
 }
 
 export function listCompanies(root: string): Company[] {
@@ -118,21 +133,34 @@ function optLatLon(
 
 export function saveIndustry(root: string, input: Partial<Industry> & { name: string }): Industry {
   ensureWorkspace(root)
+  const dir = join(root, 'industries')
+  const all = readJsonDir<Industry>(dir)
   const id = input.id ?? uuidv4()
   const existing =
-    input.id && existsSync(join(root, 'industries', `${input.id}.json`))
-      ? (JSON.parse(
-          readFileSync(join(root, 'industries', `${input.id}.json`), 'utf-8')
-        ) as Industry)
+    input.id && existsSync(join(dir, `${input.id}.json`))
+      ? (JSON.parse(readFileSync(join(dir, `${input.id}.json`), 'utf-8')) as Industry)
       : null
+
+  let parentId =
+    typeof input.parentId === 'string' && input.parentId.trim()
+      ? input.parentId.trim()
+      : undefined
+  if (parentId && !all.some((x) => x.id === parentId)) {
+    parentId = undefined
+  }
+  if (parentId && (parentId === id || wouldCreateIndustryCycle(all, id, parentId))) {
+    parentId = undefined
+  }
+
   const row: Industry = {
     id,
     name: input.name.trim(),
+    parentId,
     description: input.description?.trim() || undefined,
     createdAt: existing?.createdAt ?? now(),
     updatedAt: now()
   }
-  writeFileSync(join(root, 'industries', `${id}.json`), JSON.stringify(row, null, 2), 'utf-8')
+  writeFileSync(join(dir, `${id}.json`), JSON.stringify(row, null, 2), 'utf-8')
   touchManifest(root)
   return row
 }
@@ -205,6 +233,10 @@ export function saveContact(
 }
 
 export function deleteIndustry(root: string, id: string): void {
+  const all = readJsonDir<Industry>(join(root, 'industries'))
+  if (all.some((i) => i.parentId === id)) {
+    throw new Error('INDUSTRY_HAS_CHILDREN')
+  }
   const p = join(root, 'industries', `${id}.json`)
   if (existsSync(p)) unlinkSync(p)
   touchManifest(root)

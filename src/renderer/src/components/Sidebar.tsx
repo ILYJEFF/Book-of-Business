@@ -31,8 +31,9 @@ export default function Sidebar(): React.ReactElement {
   return (
     <aside className="sidebar">
       <header className="sidebar-header">
+        <p className="sidebar-eyebrow">Local ledger</p>
         <h1 className="sidebar-title">Book of Business</h1>
-        <p className="sidebar-tag">Local files. Your folder.</p>
+        <p className="sidebar-tag">Files on disk in a folder you choose. No cloud unless you sync it yourself.</p>
       </header>
 
       <nav className="sidebar-nav" aria-label="Sections">
