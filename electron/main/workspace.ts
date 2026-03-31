@@ -251,6 +251,7 @@ export function saveContact(
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
     title: input.title?.trim() || undefined,
+    department: input.department?.trim() || undefined,
     category: input.category,
     emails: Array.isArray(input.emails) ? input.emails.map((e) => e.trim()).filter(Boolean) : [],
     phones: Array.isArray(input.phones)

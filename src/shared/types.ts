@@ -34,6 +34,8 @@ export interface Contact {
   firstName: string
   lastName: string
   title?: string
+  /** Workplace department; one of the standard labels from the app list, or a custom string if edited elsewhere. */
+  department?: string
   category: ContactCategory
   emails: string[]
   phones: PhoneEntry[]

@@ -5,6 +5,7 @@ import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
 import ContactFilterPanel from '../components/ContactFilterPanel'
 import IndustrySearchPick from '../components/IndustrySearchPick'
+import { BUSINESS_DEPARTMENTS, BUSINESS_DEPARTMENT_SET } from '../lib/businessDepartments'
 import { contactDisplayName, companyById, industryPathLabel, initials } from '../lib/format'
 import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
@@ -163,6 +164,13 @@ export default function ContactsView(): React.ReactElement {
 
   const displayDraft = editing && draft ? draft : selected
 
+  const departmentNotInList = useMemo(() => {
+    if (!displayDraft) return null
+    const cur = ((displayDraft as Contact).department ?? '').trim()
+    if (!cur || BUSINESS_DEPARTMENT_SET.has(cur)) return null
+    return cur
+  }, [displayDraft])
+
   return (
     <div className="split-view">
       <div className="list-column">
@@ -193,6 +201,7 @@ export default function ContactsView(): React.ReactElement {
                   <div className="list-row-title">{contactDisplayName(c)}</div>
                   <div className="list-row-sub">
                     {c.title ||
+                      c.department ||
                       c.companyIds.map((id) => companyById(companyMap, id)).join(', ') ||
                       'No title yet'}
                   </div>
@@ -322,18 +331,53 @@ export default function ContactsView(): React.ReactElement {
                 </div>
               </div>
 
-              <div>
-                <label className="field-label" htmlFor="title">
-                  Role / title
-                </label>
-                <input
-                  id="title"
-                  className="text-input focus-ring"
-                  disabled={!editing}
-                  placeholder="e.g. VP Sales"
-                  value={displayDraft.title ?? ''}
-                  onChange={(e) => editing && setDraft((d) => (d ? { ...d, title: e.target.value } : d))}
-                />
+              <div className="form-row-2">
+                <div>
+                  <label className="field-label" htmlFor="title">
+                    Role / title
+                  </label>
+                  <input
+                    id="title"
+                    className="text-input focus-ring"
+                    disabled={!editing}
+                    placeholder="e.g. VP Sales"
+                    value={displayDraft.title ?? ''}
+                    onChange={(e) => editing && setDraft((d) => (d ? { ...d, title: e.target.value } : d))}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="dept">
+                    Department
+                  </label>
+                  {!editing ? (
+                    <p className="muted small" style={{ marginTop: 4, marginBottom: 0 }}>
+                      {(displayDraft as Contact).department?.trim() || 'No department on file.'}
+                    </p>
+                  ) : (
+                    <select
+                      id="dept"
+                      className="select-input focus-ring"
+                      value={(displayDraft as Contact).department ?? ''}
+                      onChange={(e) =>
+                        setDraft((d) => {
+                          if (!d) return d
+                          const v = e.target.value.trim()
+                          return { ...d, department: v || undefined }
+                        })
+                      }
+                    >
+                      <option value="">Not specified</option>
+                      {departmentNotInList && (
+                        <option value={departmentNotInList}>{departmentNotInList}</option>
+                      )}
+                      {BUSINESS_DEPARTMENTS.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div>
