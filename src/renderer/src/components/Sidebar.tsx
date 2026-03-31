@@ -1,18 +1,30 @@
 import { useApp } from '../context/AppContext'
 
-const items = [
-  { id: 'contacts' as const, label: 'Contacts' },
-  { id: 'companies' as const, label: 'Companies' },
-  { id: 'industries' as const, label: 'Industries' },
-  { id: 'settings' as const, label: 'Library' }
+type NavItem = {
+  id: 'contacts' | 'companies' | 'map' | 'industries' | 'settings'
+  label: string
+  countKey?: 'contacts' | 'companies' | 'map' | 'industries'
+}
+
+const items: NavItem[] = [
+  { id: 'contacts', label: 'Contacts', countKey: 'contacts' },
+  { id: 'companies', label: 'Companies', countKey: 'companies' },
+  { id: 'map', label: 'Map', countKey: 'map' },
+  { id: 'industries', label: 'Industries', countKey: 'industries' },
+  { id: 'settings', label: 'Library' }
 ]
 
 export default function Sidebar(): React.ReactElement {
   const { section, setSection, contacts, companies, industries } = useApp()
 
+  const plotted =
+    contacts.filter((c) => c.latitude != null && c.longitude != null).length +
+    companies.filter((c) => c.latitude != null && c.longitude != null).length
+
   const counts: Record<string, number> = {
     contacts: contacts.length,
     companies: companies.length,
+    map: plotted,
     industries: industries.length
   }
 
@@ -26,6 +38,7 @@ export default function Sidebar(): React.ReactElement {
       <nav className="sidebar-nav" aria-label="Sections">
         {items.map((it) => {
           const active = section === it.id
+          const count = it.countKey != null ? counts[it.countKey] ?? 0 : null
           return (
             <button
               key={it.id}
@@ -34,7 +47,7 @@ export default function Sidebar(): React.ReactElement {
               onClick={() => setSection(it.id)}
             >
               <span>{it.label}</span>
-              {it.id !== 'settings' && <span className="sidebar-link-count">{counts[it.id] ?? 0}</span>}
+              {count !== null && <span className="sidebar-link-count">{count}</span>}
             </button>
           )
         })}

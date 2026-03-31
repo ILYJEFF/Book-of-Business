@@ -5,6 +5,7 @@ import ContactsView from './views/ContactsView'
 import CompaniesView from './views/CompaniesView'
 import IndustriesView from './views/IndustriesView'
 import SettingsView from './views/SettingsView'
+import MapView from './views/MapView'
 
 function Shell(): React.ReactElement {
   const { workspacePath, section, loading } = useApp()
@@ -34,6 +35,7 @@ function Shell(): React.ReactElement {
           {section === 'contacts' && <ContactsView />}
           {section === 'companies' && <CompaniesView />}
           {section === 'industries' && <IndustriesView />}
+          {section === 'map' && <MapView />}
           {section === 'settings' && <SettingsView />}
         </div>
       </main>

@@ -97,6 +97,25 @@ function now(): string {
   return new Date().toISOString()
 }
 
+function optNum(v: unknown): number | undefined {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim()) {
+    const n = parseFloat(v)
+    if (Number.isFinite(n)) return n
+  }
+  return undefined
+}
+
+function optLatLon(
+  lat: unknown,
+  lon: unknown
+): { latitude?: number; longitude?: number } {
+  const latitude = optNum(lat)
+  const longitude = optNum(lon)
+  if (latitude === undefined || longitude === undefined) return {}
+  return { latitude, longitude }
+}
+
 export function saveIndustry(root: string, input: Partial<Industry> & { name: string }): Industry {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
@@ -130,12 +149,15 @@ export function saveCompany(
           readFileSync(join(root, 'companies', `${input.id}.json`), 'utf-8')
         ) as Company)
       : null
+  const coords = optLatLon(input.latitude, input.longitude)
   const row: Company = {
     id,
     name: input.name.trim(),
     website: input.website?.trim() || undefined,
     industryId: input.industryId || undefined,
     notes: input.notes?.trim() || undefined,
+    address: input.address?.trim() || undefined,
+    ...coords,
     createdAt: existing?.createdAt ?? now(),
     updatedAt: now()
   }
@@ -154,6 +176,7 @@ export function saveContact(
     input.id && existsSync(join(root, 'contacts', `${input.id}.json`))
       ? (JSON.parse(readFileSync(join(root, 'contacts', `${input.id}.json`), 'utf-8')) as Contact)
       : null
+  const coords = optLatLon(input.latitude, input.longitude)
   const row: Contact = {
     id,
     firstName: input.firstName.trim(),
@@ -171,6 +194,8 @@ export function saveContact(
     companyIds: Array.isArray(input.companyIds) ? [...new Set(input.companyIds)] : [],
     industryIds: Array.isArray(input.industryIds) ? [...new Set(input.industryIds)] : [],
     notes: input.notes?.trim() || undefined,
+    address: input.address?.trim() || undefined,
+    ...coords,
     createdAt: existing?.createdAt ?? now(),
     updatedAt: now()
   }

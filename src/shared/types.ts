@@ -19,6 +19,10 @@ export interface Company {
   website?: string
   industryId?: string
   notes?: string
+  /** Street or mailing line; used with geocoding for the map */
+  address?: string
+  latitude?: number
+  longitude?: number
   createdAt: string
   updatedAt: string
 }
@@ -36,8 +40,18 @@ export interface Contact {
   companyIds: string[]
   industryIds: string[]
   notes?: string
+  address?: string
+  latitude?: number
+  longitude?: number
   createdAt: string
   updatedAt: string
+}
+
+/** Result from Nominatim (main process only); not stored as JSON entity */
+export interface GeocodeResult {
+  lat: number
+  lon: number
+  displayName: string
 }
 
 export interface WorkspaceManifest {

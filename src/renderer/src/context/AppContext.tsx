@@ -9,7 +9,9 @@ import {
 } from 'react'
 import type { Company, Contact, Industry } from '../../../shared/types'
 
-type Section = 'contacts' | 'companies' | 'industries' | 'settings'
+export type Section = 'contacts' | 'companies' | 'industries' | 'map' | 'settings'
+
+export type OpenRecordKind = 'contact' | 'company'
 
 interface AppState {
   workspacePath: string | null
@@ -18,7 +20,10 @@ interface AppState {
   companies: Company[]
   contacts: Contact[]
   loading: boolean
+  openRecordRequest: { kind: OpenRecordKind; id: string } | null
   setSection: (s: Section) => void
+  requestOpenRecord: (kind: OpenRecordKind, id: string) => void
+  clearOpenRecordRequest: () => void
   refresh: () => Promise<void>
   chooseWorkspace: () => Promise<void>
   clearWorkspace: () => Promise<void>
@@ -34,6 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
   const [companies, setCompanies] = useState<Company[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
+  const [openRecordRequest, setOpenRecordRequest] = useState<{ kind: OpenRecordKind; id: string } | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -77,6 +83,15 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
     await window.book.openWorkspaceInFinder()
   }, [])
 
+  const requestOpenRecord = useCallback((kind: OpenRecordKind, id: string) => {
+    setOpenRecordRequest({ kind, id })
+    setSection(kind === 'contact' ? 'contacts' : 'companies')
+  }, [])
+
+  const clearOpenRecordRequest = useCallback(() => {
+    setOpenRecordRequest(null)
+  }, [])
+
   const value = useMemo(
     () => ({
       workspacePath,
@@ -85,7 +100,10 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
       companies,
       contacts,
       loading,
+      openRecordRequest,
       setSection,
+      requestOpenRecord,
+      clearOpenRecordRequest,
       refresh,
       chooseWorkspace,
       clearWorkspace,
@@ -98,6 +116,9 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
       companies,
       contacts,
       loading,
+      openRecordRequest,
+      requestOpenRecord,
+      clearOpenRecordRequest,
       refresh,
       chooseWorkspace,
       clearWorkspace,

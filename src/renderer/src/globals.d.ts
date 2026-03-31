@@ -1,4 +1,4 @@
-import type { Company, Contact, Industry } from '../../shared/types'
+import type { Company, Contact, GeocodeResult, Industry } from '../../shared/types'
 
 export interface BookBridge {
   getWorkspace: () => Promise<string | null>
@@ -20,6 +20,7 @@ export interface BookBridge {
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
   deleteContact: (id: string) => Promise<void>
+  geocodeSearch: (query: string) => Promise<GeocodeResult | null>
 }
 
 declare global {

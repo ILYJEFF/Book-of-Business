@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { loadSettings, saveSettings } from './store'
+import { geocodeSearch } from './geocode'
 import {
   deleteCompany,
   deleteContact,
@@ -131,6 +132,11 @@ app.whenReady().then(() => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     deleteContact(root, id)
+  })
+
+  ipcMain.handle('geo:search', async (_e, query: string) => {
+    if (typeof query !== 'string') return null
+    return geocodeSearch(query)
   })
 
   app.on('activate', () => {

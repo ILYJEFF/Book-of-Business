@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
+import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
 import { contactDisplayName, companyById, industryById, initials } from '../lib/format'
 
@@ -16,12 +17,13 @@ function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
     website: '',
     companyIds: [],
     industryIds: [],
-    notes: ''
+    notes: '',
+    address: ''
   }
 }
 
 export default function ContactsView(): React.ReactElement {
-  const { contacts, companies, industries, refresh } = useApp()
+  const { contacts, companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -55,7 +57,8 @@ export default function ContactsView(): React.ReactElement {
         ...(c.emails ?? []),
         ...(c.phones?.map((p) => p.value) ?? []),
         ...c.companyIds.map((id) => companyById(companyMap, id)),
-        ...c.industryIds.map((id) => industryById(industryMap, id))
+        ...c.industryIds.map((id) => industryById(industryMap, id)),
+        c.address
       ]
         .join(' ')
         .toLowerCase()
@@ -141,6 +144,17 @@ export default function ContactsView(): React.ReactElement {
     },
     []
   )
+
+  useEffect(() => {
+    if (!openRecordRequest) return
+    if (openRecordRequest.kind !== 'contact') {
+      clearOpenRecordRequest()
+      return
+    }
+    const c = contacts.find((x) => x.id === openRecordRequest.id)
+    clearOpenRecordRequest()
+    if (c) openDetail(c)
+  }, [openRecordRequest, contacts, clearOpenRecordRequest, openDetail])
 
   const displayDraft = editing && draft ? draft : selected
 
@@ -341,6 +355,8 @@ export default function ContactsView(): React.ReactElement {
                   />
                 </div>
               </div>
+
+              <AddressFields<Contact> draft={displayDraft} editing={editing} setDraft={setDraft} />
 
               <EmailsBlock draft={displayDraft as Contact} editing={editing} setDraft={setDraft} />
               <PhonesBlock draft={displayDraft as Contact} editing={editing} setDraft={setDraft} />

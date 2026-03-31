@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company } from '../../../shared/types'
+import AddressFields from '../components/AddressFields'
 import { useApp } from '../context/AppContext'
 
 export default function CompaniesView(): React.ReactElement {
-  const { companies, industries, refresh } = useApp()
+  const { companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -33,7 +34,7 @@ export default function CompaniesView(): React.ReactElement {
     setSelectedId(null)
     setCreating(true)
     setEditing(true)
-    setDraft({ name: '', website: '', industryId: '', notes: '' })
+    setDraft({ name: '', website: '', industryId: '', notes: '', address: '' })
     setConfirmDelete(false)
   }, [])
 
@@ -91,6 +92,17 @@ export default function CompaniesView(): React.ReactElement {
   }, [selected, refresh])
 
   const display = editing && draft ? draft : selected
+
+  useEffect(() => {
+    if (!openRecordRequest) return
+    if (openRecordRequest.kind !== 'company') {
+      clearOpenRecordRequest()
+      return
+    }
+    const c = companies.find((x) => x.id === openRecordRequest.id)
+    clearOpenRecordRequest()
+    if (c) open(c)
+  }, [openRecordRequest, companies, clearOpenRecordRequest, open])
 
   const coInitial = (name: string) => (name.trim()[0] ?? '?').toUpperCase()
 
@@ -244,6 +256,7 @@ export default function CompaniesView(): React.ReactElement {
                   ))}
                 </select>
               </div>
+              <AddressFields<Company> draft={display} editing={editing} setDraft={setDraft} />
               <div>
                 <label className="field-label" htmlFor="co-notes">
                   Notes

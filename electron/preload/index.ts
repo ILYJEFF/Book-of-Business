@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Company, Contact, Industry } from '../../src/shared/types'
+import type { Company, Contact, GeocodeResult, Industry } from '../../src/shared/types'
 
 export interface BookAPI {
   getWorkspace: () => Promise<string | null>
@@ -21,6 +21,7 @@ export interface BookAPI {
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
   deleteContact: (id: string) => Promise<void>
+  geocodeSearch: (query: string) => Promise<GeocodeResult | null>
 }
 
 const api: BookAPI = {
@@ -36,7 +37,8 @@ const api: BookAPI = {
   saveContact: (payload) => ipcRenderer.invoke('data:saveContact', payload),
   deleteIndustry: (id) => ipcRenderer.invoke('data:deleteIndustry', id),
   deleteCompany: (id) => ipcRenderer.invoke('data:deleteCompany', id),
-  deleteContact: (id) => ipcRenderer.invoke('data:deleteContact', id)
+  deleteContact: (id) => ipcRenderer.invoke('data:deleteContact', id),
+  geocodeSearch: (query) => ipcRenderer.invoke('geo:search', query)
 }
 
 contextBridge.exposeInMainWorld('book', api)
