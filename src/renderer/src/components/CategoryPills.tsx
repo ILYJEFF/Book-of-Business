@@ -1,34 +1,38 @@
 import type { ContactCategory } from '../../../shared/types'
-
-const ORDER: ContactCategory[] = ['personal', 'work', 'networking', 'other']
+import { CONTACT_CATEGORY_ORDER } from '../lib/recordFilters'
 
 const labels: Record<ContactCategory, string> = {
   personal: 'Personal',
   work: 'Work',
   networking: 'Network',
+  client: 'Client',
+  candidate: 'Candidate',
+  family: 'Family',
   other: 'Other'
 }
 
 export default function CategoryPills({
   value,
-  onChange,
+  onToggle,
   disabled
 }: {
-  value: ContactCategory
-  onChange: (c: ContactCategory) => void
+  value: ContactCategory[]
+  onToggle: (c: ContactCategory) => void
   disabled?: boolean
 }): React.ReactElement {
+  const set = new Set(value)
   return (
-    <div className="segment-group" role="group" aria-label="Relationship">
-      {ORDER.map((c) => {
-        const on = c === value
+    <div className="segment-group segment-group--multi" role="group" aria-label="Relationship (choose any that apply)">
+      {CONTACT_CATEGORY_ORDER.map((c) => {
+        const on = set.has(c)
         return (
           <button
             key={c}
             type="button"
             disabled={disabled}
             className={`segment focus-ring${on ? ' segment--on' : ''}`}
-            onClick={() => onChange(c)}
+            aria-pressed={on}
+            onClick={() => onToggle(c)}
           >
             {labels[c]}
           </button>

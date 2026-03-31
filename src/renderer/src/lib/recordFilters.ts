@@ -1,19 +1,26 @@
-import type { Company, Contact, ContactCategory, Industry } from '../../../shared/types'
+import type { Company, Contact, ContactCategory, Industry, Tag } from '../../../shared/types'
 import { companyById, industryPathLabel } from './format'
 
 export type MapPinFilter = 'any' | 'mapped' | 'unmapped'
 
 export const CONTACT_CATEGORIES: { id: ContactCategory; label: string }[] = [
-  { id: 'work', label: 'Work' },
   { id: 'personal', label: 'Personal' },
+  { id: 'work', label: 'Work' },
   { id: 'networking', label: 'Networking' },
+  { id: 'client', label: 'Client' },
+  { id: 'candidate', label: 'Candidate' },
+  { id: 'family', label: 'Family' },
   { id: 'other', label: 'Other' }
 ]
+
+export const CONTACT_CATEGORY_ORDER: ContactCategory[] = CONTACT_CATEGORIES.map((x) => x.id)
 
 export interface ContactFilterModel {
   query: string
   /** Empty = all relationships */
   categories: Set<ContactCategory>
+  /** Empty = any tag; contact must have at least one selected tag */
+  tagIds: Set<string>
   companyId: string
   industryId: string
   mapPin: MapPinFilter
@@ -23,6 +30,7 @@ export function createDefaultContactFilters(): ContactFilterModel {
   return {
     query: '',
     categories: new Set(),
+    tagIds: new Set(),
     companyId: '',
     industryId: '',
     mapPin: 'any'
@@ -33,9 +41,19 @@ export function contactPassesFilters(
   c: Contact,
   f: ContactFilterModel,
   companyMap: Map<string, Company>,
-  industryMap: Map<string, Industry>
+  industryMap: Map<string, Industry>,
+  tagMap: Map<string, Tag>
 ): boolean {
-  if (f.categories.size > 0 && !f.categories.has(c.category)) return false
+  if (f.categories.size > 0) {
+    const cc = c.categories ?? []
+    const any = cc.some((cat) => f.categories.has(cat))
+    if (!any) return false
+  }
+  if (f.tagIds.size > 0) {
+    const ids = c.tagIds ?? []
+    const anyTag = [...f.tagIds].some((tid) => ids.includes(tid))
+    if (!anyTag) return false
+  }
   if (f.companyId && !c.companyIds.includes(f.companyId)) return false
   if (f.industryId && !c.industryIds.includes(f.industryId)) return false
   const mapped =
@@ -55,6 +73,7 @@ export function contactPassesFilters(
       ...(c.phones?.map((p) => p.value) ?? []),
       ...c.companyIds.map((id) => companyById(companyMap, id)),
       ...c.industryIds.map((id) => industryPathLabel(industryMap, id)),
+      ...(c.tagIds ?? []).map((id) => tagMap.get(id)?.name ?? ''),
       c.birthday ?? '',
       c.address,
       c.notes ?? ''
@@ -69,6 +88,7 @@ export function contactPassesFilters(
 export function activeContactFilterCount(f: ContactFilterModel): number {
   let n = f.query.trim() ? 1 : 0
   if (f.categories.size > 0) n++
+  if (f.tagIds.size > 0) n++
   if (f.companyId) n++
   if (f.industryId) n++
   if (f.mapPin !== 'any') n++
@@ -79,6 +99,7 @@ export function activeContactFilterCount(f: ContactFilterModel): number {
 export function facetContactFilterCount(f: ContactFilterModel): number {
   let n = 0
   if (f.categories.size > 0) n++
+  if (f.tagIds.size > 0) n++
   if (f.companyId) n++
   if (f.industryId) n++
   if (f.mapPin !== 'any') n++

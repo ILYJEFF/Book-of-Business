@@ -1,16 +1,77 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync
+} from 'fs'
+import { basename, extname, isAbsolute, join, relative, resolve } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { formatNanpPhone } from '../../src/shared/phoneFormat'
 import type {
   Company,
   Contact,
+  ContactAttachment,
+  ContactCategory,
   EmailEntry,
   Industry,
   PhoneEntry,
   SaveUrlChannels,
+  Tag,
   WorkspaceManifest
 } from '../../src/shared/types'
+
+const ALLOWED_CONTACT_CATEGORIES: readonly ContactCategory[] = [
+  'personal',
+  'work',
+  'networking',
+  'client',
+  'candidate',
+  'family',
+  'other'
+]
+
+function orderContactCategories(arr: ContactCategory[]): ContactCategory[] {
+  const rank = new Map(ALLOWED_CONTACT_CATEGORIES.map((c, i) => [c, i]))
+  return [...new Set(arr)].sort((a, b) => (rank.get(a) ?? 99) - (rank.get(b) ?? 99))
+}
+
+/** Disk + IPC: legacy single `category` upgrades to `categories`. */
+export function normalizeContactCategoriesFromDisk(
+  raw: Contact & { category?: unknown }
+): ContactCategory[] {
+  const allowed = new Set<ContactCategory>(ALLOWED_CONTACT_CATEGORIES)
+  const arr = raw.categories
+  if (Array.isArray(arr)) {
+    const out = arr.filter(
+      (x): x is ContactCategory => typeof x === 'string' && allowed.has(x as ContactCategory)
+    )
+    const unique = orderContactCategories(out)
+    if (unique.length > 0) return unique
+  }
+  const leg = raw.category
+  if (typeof leg === 'string' && allowed.has(leg as ContactCategory)) return [leg as ContactCategory]
+  return ['work'] as ContactCategory[]
+}
+
+function normalizeContactCategoriesInput(raw: unknown): ContactCategory[] {
+  const allowed = new Set<ContactCategory>(ALLOWED_CONTACT_CATEGORIES)
+  if (!Array.isArray(raw)) return ['work'] as ContactCategory[]
+  const out = raw.filter(
+    (x): x is ContactCategory => typeof x === 'string' && allowed.has(x as ContactCategory)
+  )
+  const unique = orderContactCategories(out)
+  return unique.length > 0 ? unique : (['work'] as ContactCategory[])
+}
+
+function normalizeTagIdsFromDisk(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.map((id) => String(id).trim()).filter(Boolean))]
+}
 const SCHEMA = 1
 const APP_ID = 'book-of-business'
 
@@ -25,6 +86,7 @@ function manifestPath(root: string): string {
 export function ensureWorkspace(root: string): void {
   ensureDir(root)
   ensureDir(join(root, 'industries'))
+  ensureDir(join(root, 'tags'))
   ensureDir(join(root, 'companies'))
   ensureDir(join(root, 'contacts'))
   const mp = manifestPath(root)
@@ -172,12 +234,57 @@ function normalizePhonesFromDisk(raw: unknown): PhoneEntry[] {
     })
 }
 
-function coerceContactFromDisk(c: Contact): Contact {
-  return {
-    ...c,
-    emails: normalizeEmailsFromDisk(c.emails as unknown),
-    phones: normalizePhonesFromDisk(c.phones as unknown)
+/** Normalize attachment rows from disk or save payloads. Exported for import bundle normalization. */
+export function normalizeContactAttachmentsFromDisk(raw: unknown): ContactAttachment[] {
+  if (!Array.isArray(raw)) return []
+  const out: ContactAttachment[] = []
+  for (const a of raw) {
+    if (!a || typeof a !== 'object') continue
+    const o = a as Record<string, unknown>
+    const id = String(o.id ?? '').trim()
+    const fileName = String(o.fileName ?? '').trim()
+    const rel = String(o.relativePath ?? '').trim()
+    if (!id || !fileName || !rel) continue
+    const sizeBytes =
+      typeof o.sizeBytes === 'number' && Number.isFinite(o.sizeBytes) ? o.sizeBytes : undefined
+    const createdAt =
+      typeof o.createdAt === 'string' && o.createdAt.trim() ? o.createdAt.trim() : now()
+    out.push({
+      id,
+      fileName,
+      relativePath: rel.replace(/\\/g, '/'),
+      sizeBytes,
+      createdAt
+    })
   }
+  return out
+}
+
+function coerceContactFromDisk(c: Contact): Contact {
+  const { category: _legacyCategory, ...rest } = c as Contact & { category?: unknown }
+  return {
+    ...rest,
+    favorite: c.favorite === true,
+    categories: normalizeContactCategoriesFromDisk(c as Contact & { category?: unknown }),
+    tagIds: normalizeTagIdsFromDisk(c.tagIds),
+    emails: normalizeEmailsFromDisk(c.emails as unknown),
+    phones: normalizePhonesFromDisk(c.phones as unknown),
+    attachments: normalizeContactAttachmentsFromDisk(c.attachments)
+  }
+}
+
+/** Resolve a workspace-relative attachment path to an absolute file only if it stays under `contact-attachments/`. */
+export function resolveContactAttachmentPath(root: string, relativePath: string): string | null {
+  const rel = relativePath.replace(/\\/g, '/').replace(/^\/+/, '')
+  if (!rel.startsWith('contact-attachments/')) return null
+  const parts = rel.split('/').filter((x) => x && x !== '.' && x !== '..')
+  if (parts.length < 3) return null
+  const full = resolve(root, ...parts)
+  const rootAttach = resolve(root, 'contact-attachments')
+  const relBetween = relative(rootAttach, full)
+  if (relBetween.startsWith('..') || isAbsolute(relBetween)) return null
+  if (!existsSync(full)) return null
+  return full
 }
 
 export function listContacts(root: string): Contact[] {
@@ -188,6 +295,51 @@ export function listContacts(root: string): Contact[] {
       const bn = `${b.lastName} ${b.firstName}`
       return an.localeCompare(bn)
     })
+}
+
+export function listTags(root: string): Tag[] {
+  return readJsonDir<Tag>(join(root, 'tags')).sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function saveTag(root: string, input: Partial<Tag> & { name: string }): Tag {
+  ensureWorkspace(root)
+  const id = input.id ?? uuidv4()
+  const existing =
+    input.id && existsSync(join(root, 'tags', `${input.id}.json`))
+      ? (JSON.parse(readFileSync(join(root, 'tags', `${input.id}.json`), 'utf-8')) as Tag)
+      : null
+  const row: Tag = {
+    id,
+    name: input.name.trim(),
+    createdAt: existing?.createdAt ?? now(),
+    updatedAt: now()
+  }
+  ensureDir(join(root, 'tags'))
+  writeFileSync(join(root, 'tags', `${id}.json`), JSON.stringify(row, null, 2), 'utf-8')
+  touchManifest(root)
+  return row
+}
+
+/** Removes the tag file and strips the id from every contact. */
+export function deleteTag(root: string, id: string): void {
+  const dir = join(root, 'contacts')
+  if (existsSync(dir)) {
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
+      const path = join(dir, f)
+      const raw = JSON.parse(readFileSync(path, 'utf-8')) as Contact
+      const base = coerceContactFromDisk(raw)
+      if (!base.tagIds.includes(id)) continue
+      const next: Contact = {
+        ...base,
+        tagIds: base.tagIds.filter((t) => t !== id),
+        updatedAt: now()
+      }
+      writeFileSync(path, JSON.stringify(next, null, 2), 'utf-8')
+    }
+  }
+  const p = join(root, 'tags', `${id}.json`)
+  if (existsSync(p)) unlinkSync(p)
+  touchManifest(root)
 }
 
 function now(): string {
@@ -334,7 +486,7 @@ export function saveCompany(
 
 export function saveContact(
   root: string,
-  input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] },
+  input: Partial<Contact> & { firstName: string; lastName: string; categories: ContactCategory[] },
   /** Prefer this value (string or null to clear); avoids IPC losing nested fields on some builds. */
   departmentFromChannel?: unknown,
   /** Photo + LinkedIn + website strings beside payload for reliable IPC. */
@@ -373,13 +525,33 @@ export function saveContact(
     }
   }
 
+  const favorite = Object.hasOwn(input as object, 'favorite')
+    ? input.favorite === true
+    : existing?.favorite === true
+
+  const attachments = Object.hasOwn(input as object, 'attachments')
+    ? normalizeContactAttachmentsFromDisk((input as Record<string, unknown>).attachments)
+    : normalizeContactAttachmentsFromDisk((existing as Record<string, unknown> | null)?.attachments)
+
+  const categories: ContactCategory[] = Object.hasOwn(input as object, 'categories')
+    ? normalizeContactCategoriesInput(input.categories)
+    : existing
+      ? normalizeContactCategoriesFromDisk(existing as Contact & { category?: unknown })
+      : (['work'] as ContactCategory[])
+
+  const tagIds = Object.hasOwn(input as object, 'tagIds')
+    ? normalizeTagIdsFromDisk(input.tagIds)
+    : normalizeTagIdsFromDisk(existing?.tagIds)
+
   const row: Contact = {
     id,
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
+    favorite,
     title: input.title?.trim() || undefined,
     department: optDepartment(deptRaw),
-    category: input.category,
+    categories,
+    tagIds,
     emails: normalizeEmailsFromDisk(input.emails),
     phones: Array.isArray(input.phones)
       ? input.phones
@@ -405,6 +577,7 @@ export function saveContact(
       : existing?.birthday,
     address: input.address?.trim() || undefined,
     ...coords,
+    attachments,
     createdAt: existing?.createdAt ?? now(),
     updatedAt: now()
   }
@@ -418,8 +591,9 @@ export function updateContactPin(root: string, id: string, latitude: number, lon
   const p = join(root, 'contacts', `${id}.json`)
   if (!existsSync(p)) throw new Error('NOT_FOUND')
   const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
+  const base = coerceContactFromDisk(cur)
   const next: Contact = {
-    ...cur,
+    ...base,
     latitude,
     longitude,
     updatedAt: now()
@@ -464,5 +638,80 @@ export function deleteCompany(root: string, id: string): void {
 export function deleteContact(root: string, id: string): void {
   const p = join(root, 'contacts', `${id}.json`)
   if (existsSync(p)) unlinkSync(p)
+  const attDir = join(root, 'contact-attachments', id)
+  if (existsSync(attDir)) rmSync(attDir, { recursive: true, force: true })
   touchManifest(root)
+}
+
+export function addContactAttachmentsFromPaths(
+  root: string,
+  contactId: string,
+  absoluteSourcePaths: string[]
+): Contact {
+  ensureWorkspace(root)
+  const p = join(root, 'contacts', `${contactId}.json`)
+  if (!existsSync(p)) throw new Error('NOT_FOUND')
+  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
+  const base = coerceContactFromDisk(cur)
+  const dir = join(root, 'contact-attachments', contactId)
+  ensureDir(dir)
+  const attachments = normalizeContactAttachmentsFromDisk(base.attachments)
+  for (const abs of absoluteSourcePaths) {
+    if (!abs || !existsSync(abs)) continue
+    const st = statSync(abs)
+    if (!st.isFile()) continue
+    const ext = extname(abs) || ''
+    const attId = uuidv4()
+    const destName = `${attId}${ext}`
+    const destAbs = join(dir, destName)
+    const relativePath = `contact-attachments/${contactId}/${destName}`
+    copyFileSync(abs, destAbs)
+    attachments.push({
+      id: attId,
+      fileName: basename(abs),
+      relativePath,
+      sizeBytes: st.size,
+      createdAt: now()
+    })
+  }
+  const next: Contact = {
+    ...base,
+    attachments,
+    updatedAt: now()
+  }
+  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
+  touchManifest(root)
+  return coerceContactFromDisk(next)
+}
+
+export function removeContactAttachment(
+  root: string,
+  contactId: string,
+  attachmentId: string
+): Contact {
+  const p = join(root, 'contacts', `${contactId}.json`)
+  if (!existsSync(p)) throw new Error('NOT_FOUND')
+  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
+  const base = coerceContactFromDisk(cur)
+  const attachments = normalizeContactAttachmentsFromDisk(base.attachments)
+  const idx = attachments.findIndex((a) => a.id === attachmentId)
+  if (idx === -1) throw new Error('NOT_FOUND')
+  const [removed] = attachments.splice(idx, 1)
+  const full = resolveContactAttachmentPath(root, removed.relativePath)
+  if (full) unlinkSync(full)
+  const next: Contact = { ...base, attachments, updatedAt: now() }
+  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
+  touchManifest(root)
+  return coerceContactFromDisk(next)
+}
+
+export function setContactFavorite(root: string, contactId: string, favorite: boolean): Contact {
+  const p = join(root, 'contacts', `${contactId}.json`)
+  if (!existsSync(p)) throw new Error('NOT_FOUND')
+  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
+  const base = coerceContactFromDisk(cur)
+  const next: Contact = { ...base, favorite, updatedAt: now() }
+  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
+  touchManifest(root)
+  return coerceContactFromDisk(next)
 }

@@ -1,4 +1,19 @@
-export type ContactCategory = 'personal' | 'work' | 'networking' | 'other'
+export type ContactCategory =
+  | 'personal'
+  | 'work'
+  | 'networking'
+  | 'client'
+  | 'candidate'
+  | 'family'
+  | 'other'
+
+/** User-defined labels for contacts (skills, relocation, languages, etc.) */
+export interface Tag {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
 
 export interface PhoneEntry {
   label: string
@@ -38,14 +53,28 @@ export interface Company {
   updatedAt: string
 }
 
+/** File stored under `contact-attachments/{contactId}/` in the workspace. */
+export interface ContactAttachment {
+  id: string
+  /** Original filename for display */
+  fileName: string
+  /** Path relative to workspace root, e.g. `contact-attachments/{id}/{uuid}.pdf` */
+  relativePath: string
+  sizeBytes?: number
+  createdAt: string
+}
+
 export interface Contact {
   id: string
   firstName: string
   lastName: string
+  /** Starred in the Favorites tab */
+  favorite?: boolean
   title?: string
   /** Workplace department; one of the standard labels from the app list, or a custom string if edited elsewhere. */
   department?: string
-  category: ContactCategory
+  /** Relationship facets; a person can be work + personal + networking, etc. */
+  categories: ContactCategory[]
   emails: EmailEntry[]
   phones: PhoneEntry[]
   linkedinUrl?: string
@@ -54,15 +83,22 @@ export interface Contact {
   website?: string
   companyIds: string[]
   industryIds: string[]
+  /** Ids from the library `tags/` folder; create tags under Library → Tags */
+  tagIds: string[]
   notes?: string
   /** ISO date YYYY-MM-DD */
   birthday?: string
   address?: string
   latitude?: number
   longitude?: number
+  /** Résumés, assessments, references, etc. Files live under `contact-attachments/` */
+  attachments?: ContactAttachment[]
   createdAt: string
   updatedAt: string
 }
+
+/** Result of picking files to attach to a contact */
+export type AddContactAttachmentsResult = { canceled: true } | { canceled: false; contact: Contact }
 
 /** Result from Nominatim (main process only); not stored as JSON entity */
 export interface GeocodeResult {
@@ -92,6 +128,7 @@ export interface BookExportBundle {
   version: number
   exportedAt: string
   industries: Industry[]
+  tags: Tag[]
   companies: Company[]
   contacts: Contact[]
 }
@@ -105,4 +142,4 @@ export type WorkspaceExportResult =
 export type WorkspaceImportResult =
   | { canceled: true }
   | { canceled: false; error: string }
-  | { canceled: false; imported: { industries: number; companies: number; contacts: number } }
+  | { canceled: false; imported: { industries: number; tags: number; companies: number; contacts: number } }

@@ -1,14 +1,16 @@
-import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import type {
   BookExportBundle,
   Company,
   Contact,
+  ContactCategory,
   EmailEntry,
   Industry,
   PhoneEntry,
-  SaveUrlChannels
+  SaveUrlChannels,
+  Tag
 } from '../../src/shared/types'
 import { formatNanpPhone } from '../../src/shared/phoneFormat'
 import {
@@ -16,9 +18,12 @@ import {
   listCompanies,
   listContacts,
   listIndustries,
+  listTags,
+  normalizeContactAttachmentsFromDisk,
   saveCompany,
   saveContact,
-  saveIndustry
+  saveIndustry,
+  saveTag
 } from './workspace'
 
 export const BOOK_EXPORT_FORMAT = 'book-of-business-export' as const
@@ -31,6 +36,7 @@ export function buildExportBundle(root: string): BookExportBundle {
     version: BOOK_EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     industries: listIndustries(root),
+    tags: listTags(root),
     companies: listCompanies(root),
     contacts: listContacts(root)
   }
@@ -48,6 +54,8 @@ export function wipeWorkspaceEntities(root: string): void {
   wipeJsonDir(join(root, 'contacts'))
   wipeJsonDir(join(root, 'companies'))
   wipeJsonDir(join(root, 'industries'))
+  const attachmentsRoot = join(root, 'contact-attachments')
+  if (existsSync(attachmentsRoot)) rmSync(attachmentsRoot, { recursive: true, force: true })
 }
 
 function sortIndustriesForImport<T extends { id: string; parentId?: string }>(industries: T[]): T[] {
@@ -100,13 +108,36 @@ function optNum(v: unknown): number | undefined {
   return undefined
 }
 
-const CONTACT_CATEGORIES: Contact['category'][] = ['personal', 'work', 'networking', 'other']
+const ALLOWED_CATEGORIES: ContactCategory[] = [
+  'personal',
+  'work',
+  'networking',
+  'client',
+  'candidate',
+  'family',
+  'other'
+]
 
-function normCategory(v: unknown): Contact['category'] {
-  if (typeof v === 'string' && CONTACT_CATEGORIES.includes(v as Contact['category'])) {
-    return v as Contact['category']
+function normCategory(v: unknown): ContactCategory {
+  if (typeof v === 'string' && ALLOWED_CATEGORIES.includes(v as ContactCategory)) {
+    return v as ContactCategory
   }
   return 'work'
+}
+
+function normContactCategoriesFromImport(r: Record<string, unknown>): ContactCategory[] {
+  if (Array.isArray(r.categories)) {
+    const allowed = new Set<ContactCategory>(ALLOWED_CATEGORIES)
+    const out = r.categories.filter(
+      (x): x is ContactCategory => typeof x === 'string' && allowed.has(x as ContactCategory)
+    )
+    const uniq = [...new Set(out)]
+    if (uniq.length > 0) {
+      const rank = new Map(ALLOWED_CATEGORIES.map((c, i) => [c, i]))
+      return uniq.sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0))
+    }
+  }
+  return [normCategory(r.category)]
 }
 
 export function parseExportBundle(
@@ -131,7 +162,9 @@ export function parseExportBundle(
   if (!Array.isArray(o.industries) || !Array.isArray(o.companies) || !Array.isArray(o.contacts)) {
     return { ok: false, message: 'Export is missing industries, companies, or contacts arrays.' }
   }
-  return { ok: true, bundle: parsed as BookExportBundle }
+  const tags = Array.isArray(o.tags) ? o.tags : []
+  const bundle: BookExportBundle = { ...(parsed as BookExportBundle), tags }
+  return { ok: true, bundle }
 }
 
 function normalizeIndustryRow(x: unknown): (Partial<Industry> & { name: string }) | null {
@@ -176,10 +209,21 @@ function normalizeCompanyRow(x: unknown): { input: Partial<Company> & { name: st
   return { input, channels: channelsFromRecord(r) }
 }
 
+function normalizeTagRow(x: unknown): (Partial<Tag> & { name: string }) | null {
+  if (!x || typeof x !== 'object') return null
+  const r = x as Record<string, unknown>
+  const name = strOpt(r.name)
+  if (!name) return null
+  return {
+    ...(strOpt(r.id) ? { id: strOpt(r.id) } : {}),
+    name
+  }
+}
+
 function normalizeContactRow(
   x: unknown
 ): {
-  input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] }
+  input: Partial<Contact> & { firstName: string; lastName: string; categories: ContactCategory[] }
   department: string | null
   channels: SaveUrlChannels
 } | null {
@@ -222,6 +266,9 @@ function normalizeContactRow(
   const industryIds = Array.isArray(r.industryIds)
     ? [...new Set(r.industryIds.map((id) => String(id).trim()).filter(Boolean))]
     : []
+  const tagIds = Array.isArray(r.tagIds)
+    ? [...new Set(r.tagIds.map((id) => String(id).trim()).filter(Boolean))]
+    : []
   const deptRaw = r.department
   const department: string | null =
     deptRaw === null || deptRaw === undefined
@@ -233,17 +280,18 @@ function normalizeContactRow(
   const input: Partial<Contact> & {
     firstName: string
     lastName: string
-    category: Contact['category']
+    categories: ContactCategory[]
   } = {
     ...(strOpt(r.id) ? { id: strOpt(r.id) } : {}),
     firstName,
     lastName,
-    category: normCategory(r.category),
+    categories: normContactCategoriesFromImport(r),
     title: strOpt(r.title),
     emails,
     phones,
     companyIds,
     industryIds,
+    tagIds,
     notes: strOpt(r.notes),
     birthday: strOpt(r.birthday),
     address: strOpt(r.address)
@@ -254,6 +302,9 @@ function normalizeContactRow(
     input.latitude = lat
     input.longitude = lon
   }
+  if (r.favorite === true) input.favorite = true
+  const importedAttachments = normalizeContactAttachmentsFromDisk(r.attachments)
+  if (importedAttachments.length) input.attachments = importedAttachments
   return { input, department, channels: channelsFromRecord(r) }
 }
 
@@ -261,13 +312,14 @@ export function applyExportBundle(
   root: string,
   bundle: BookExportBundle,
   mode: 'merge' | 'replace'
-): { industries: number; companies: number; contacts: number } {
+): { industries: number; tags: number; companies: number; contacts: number } {
   ensureWorkspace(root)
   if (mode === 'replace') {
     wipeWorkspaceEntities(root)
   }
 
   let industries = 0
+  let tags = 0
   let companies = 0
   let contacts = 0
 
@@ -288,6 +340,13 @@ export function applyExportBundle(
     industries += 1
   }
 
+  for (const item of bundle.tags ?? []) {
+    const n = normalizeTagRow(item)
+    if (!n) continue
+    saveTag(root, n)
+    tags += 1
+  }
+
   for (const item of bundle.companies) {
     const n = normalizeCompanyRow(item)
     if (!n) continue
@@ -302,7 +361,7 @@ export function applyExportBundle(
     contacts += 1
   }
 
-  return { industries, companies, contacts }
+  return { industries, tags, companies, contacts }
 }
 
 export function writeBundleFile(path: string, bundle: BookExportBundle): void {
