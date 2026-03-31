@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { formatNanpPhone } from '../../../shared/phoneFormat'
 import {
   CUSTOM_LABEL_OPTION,
   EMAIL_LABEL_PRESETS,
@@ -38,7 +39,7 @@ export default function LabeledContactChannelRow({
           className="text-input focus-ring flex-1 min-w-0"
           disabled
           readOnly
-          value={value}
+          value={kind === 'phone' ? formatNanpPhone(value) : value}
           placeholder={valuePlaceholder}
         />
       </div>
@@ -79,9 +80,20 @@ export default function LabeledContactChannelRow({
       </div>
       <input
         className="text-input focus-ring flex-1 min-w-0"
+        type={kind === 'phone' ? 'tel' : 'text'}
+        inputMode={kind === 'phone' ? 'tel' : undefined}
+        autoComplete={kind === 'phone' ? 'tel' : undefined}
         placeholder={valuePlaceholder}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
+        onBlur={
+          kind === 'phone'
+            ? () => {
+                const next = formatNanpPhone(value)
+                if (next !== value) onValueChange(next)
+              }
+            : undefined
+        }
       />
     </div>
   )

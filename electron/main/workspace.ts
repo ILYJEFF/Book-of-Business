@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { formatNanpPhone } from '../../src/shared/phoneFormat'
 import type {
   Company,
   Contact,
@@ -166,7 +167,7 @@ function normalizePhonesFromDisk(raw: unknown): PhoneEntry[] {
       const o = p as PhoneEntry
       return {
         label: String(o.label ?? '').trim() || 'Other',
-        value: String(o.value).trim()
+        value: formatNanpPhone(String(o.value).trim())
       }
     })
 }
@@ -387,7 +388,7 @@ export function saveContact(
             const o = p as PhoneEntry
             return {
               label: String(o.label ?? '').trim() || 'Other',
-              value: String(o.value).trim()
+              value: formatNanpPhone(String(o.value).trim())
             }
           })
       : [],

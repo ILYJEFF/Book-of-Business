@@ -10,6 +10,7 @@ import type {
   PhoneEntry,
   SaveUrlChannels
 } from '../../src/shared/types'
+import { formatNanpPhone } from '../../src/shared/phoneFormat'
 import {
   ensureWorkspace,
   listCompanies,
@@ -208,7 +209,10 @@ function normalizeContactRow(
           const po = p as Record<string, unknown>
           const value = String(po.value ?? '').trim()
           if (!value) return null
-          return { label: String(po.label || 'Other').trim() || 'Other', value }
+          return {
+            label: String(po.label || 'Other').trim() || 'Other',
+            value: formatNanpPhone(value)
+          }
         })
         .filter(Boolean) as PhoneEntry[])
     : []
