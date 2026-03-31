@@ -6,7 +6,7 @@ export default function SettingsView(): React.ReactElement {
   const [showClear, setShowClear] = useState(false)
 
   return (
-    <div className="scroll-y settings-page">
+    <div className="settings-page scroll-y">
       <div className="settings-inner">
         <h2 className="settings-title">Your library</h2>
         <p className="muted" style={{ marginTop: 12, lineHeight: 1.65, fontSize: 15 }}>

@@ -157,7 +157,7 @@ export default function ContactsView(): React.ReactElement {
               aria-label="Search contacts"
             />
           </div>
-          <button type="button" className="btn btn-primary focus-ring" style={{ width: '100%' }} onClick={startCreate}>
+          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
             New contact
           </button>
         </div>
@@ -183,17 +183,36 @@ export default function ContactsView(): React.ReactElement {
               </button>
             )
           })}
-          {filtered.length === 0 && (
-            <div className="muted small" style={{ padding: 24 }}>
-              No matches. Try another search or add someone new.
-            </div>
-          )}
+          {filtered.length === 0 &&
+            (contacts.length === 0 ? (
+              <div className="list-empty">
+                <p className="list-empty-title">No contacts yet</p>
+                <p className="list-empty-text">Your people will appear here as soon as you add the first one.</p>
+              </div>
+            ) : (
+              <div className="list-empty">
+                <p className="list-empty-title">No results</p>
+                <p className="list-empty-text">Nothing matches that search. Clear the field or try another name.</p>
+              </div>
+            ))}
         </div>
       </div>
 
       <div className="scroll-y detail-column">
         {!displayDraft && !creating && (
-          <div className="empty-state">Select someone in the list, or create a new contact to start.</div>
+          <div className="empty-canvas">
+            <div className="empty-canvas-visual" aria-hidden />
+            <h2 className="empty-canvas-title">Pick someone to open their file</h2>
+            <p className="empty-canvas-text">
+              Contacts are plain JSON in your library folder. Select a row on the left, or start fresh.
+            </p>
+            <div className="empty-canvas-actions">
+              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
+                New contact
+              </button>
+              <span className="empty-canvas-hint">Saved automatically on your machine</span>
+            </div>
+          </div>
         )}
         {displayDraft && (
           <div className="detail-inner">

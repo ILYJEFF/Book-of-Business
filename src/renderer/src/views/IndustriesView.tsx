@@ -91,7 +91,7 @@ export default function IndustriesView(): React.ReactElement {
     <div className="split-view">
       <div className="list-column">
         <div className="list-toolbar">
-          <button type="button" className="btn btn-primary focus-ring" style={{ width: '100%' }} onClick={startCreate}>
+          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
             New industry
           </button>
         </div>
@@ -119,15 +119,27 @@ export default function IndustriesView(): React.ReactElement {
             )
           })}
           {industries.length === 0 && (
-            <div className="muted small" style={{ padding: 20 }}>
-              Start with a few sectors you track: healthcare, fintech, real estate, and so on.
+            <div className="list-empty">
+              <p className="list-empty-title">No industries yet</p>
+              <p className="list-empty-text">Define a few sectors you care about, then link companies and contacts.</p>
             </div>
           )}
         </div>
       </div>
 
       <div className="scroll-y detail-column">
-        {!display && <div className="empty-state">Pick an industry from the list, or create a new one.</div>}
+        {!display && (
+          <div className="empty-canvas">
+            <div className="empty-canvas-visual" aria-hidden />
+            <h2 className="empty-canvas-title">Shape your taxonomy</h2>
+            <p className="empty-canvas-text">Industries help you scan the book at a glance. Select one on the left or add your first.</p>
+            <div className="empty-canvas-actions">
+              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
+                New industry
+              </button>
+            </div>
+          </div>
+        )}
         {display && (
           <div className="detail-inner">
             <header className="detail-hero">

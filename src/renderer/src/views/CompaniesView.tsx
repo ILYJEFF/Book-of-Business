@@ -98,7 +98,7 @@ export default function CompaniesView(): React.ReactElement {
     <div className="split-view">
       <div className="list-column">
         <div className="list-toolbar">
-          <button type="button" className="btn btn-primary focus-ring" style={{ width: '100%' }} onClick={startCreate}>
+          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
             New company
           </button>
         </div>
@@ -123,15 +123,27 @@ export default function CompaniesView(): React.ReactElement {
             )
           })}
           {companies.length === 0 && (
-            <div className="muted small" style={{ padding: 20 }}>
-              Add the organizations you care about. Link them to industries and contacts.
+            <div className="list-empty">
+              <p className="list-empty-title">No companies yet</p>
+              <p className="list-empty-text">Add orgs you work with, then tie them to people and sectors.</p>
             </div>
           )}
         </div>
       </div>
 
       <div className="scroll-y detail-column">
-        {!display && <div className="empty-state">Select a company in the list, or create a new record.</div>}
+        {!display && (
+          <div className="empty-canvas">
+            <div className="empty-canvas-visual" aria-hidden />
+            <h2 className="empty-canvas-title">Open a company record</h2>
+            <p className="empty-canvas-text">Choose a row on the left or create a company to track sites, industry, and notes.</p>
+            <div className="empty-canvas-actions">
+              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
+                New company
+              </button>
+            </div>
+          </div>
+        )}
         {display && (
           <div className="detail-inner">
             <header className="detail-hero">

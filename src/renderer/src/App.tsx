@@ -30,10 +30,12 @@ function Shell(): React.ReactElement {
     <div className="app-shell">
       <Sidebar />
       <main className="app-main">
-        {section === 'contacts' && <ContactsView />}
-        {section === 'companies' && <CompaniesView />}
-        {section === 'industries' && <IndustriesView />}
-        {section === 'settings' && <SettingsView />}
+        <div className="stage">
+          {section === 'contacts' && <ContactsView />}
+          {section === 'companies' && <CompaniesView />}
+          {section === 'industries' && <IndustriesView />}
+          {section === 'settings' && <SettingsView />}
+        </div>
       </main>
     </div>
   )

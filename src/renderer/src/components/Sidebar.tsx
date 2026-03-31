@@ -20,7 +20,9 @@ export default function Sidebar(): React.ReactElement {
   return (
     <aside className="sidebar">
       <div>
-        <div className="sidebar-brand-mark" aria-hidden />
+        <div className="sidebar-brand-mark" aria-hidden>
+          B
+        </div>
         <div className="sidebar-brand-kicker">Book of Business</div>
         <div className="sidebar-brand-title">Command center</div>
         <p className="sidebar-brand-sub">Your relationships, stored as files you own.</p>
