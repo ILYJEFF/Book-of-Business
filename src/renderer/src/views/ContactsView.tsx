@@ -380,7 +380,7 @@ export default function ContactsView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="lg" />
+                <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="xl" />
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
                   <p className="detail-meta">

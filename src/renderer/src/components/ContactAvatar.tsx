@@ -7,7 +7,7 @@ export default function ContactAvatar({
   size
 }: {
   contact: Contact
-  size: 'sm' | 'lg'
+  size: 'sm' | 'lg' | 'xl'
 }): React.ReactElement {
   const url = contact.photoUrl?.trim()
   const [imgFailed, setImgFailed] = useState(false)
