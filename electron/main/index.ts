@@ -1,19 +1,36 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  dialog,
+  ipcMain,
+  Menu,
+  nativeImage,
+  shell,
+  type MenuItemConstructorOptions
+} from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { loadSettings, saveSettings } from './store'
 import { geocodeSearch } from './geocode'
 import {
+  addContactAttachmentsFromPaths,
   deleteCompany,
   deleteContact,
   deleteIndustry,
+  deleteTag,
   ensureWorkspace,
   listCompanies,
   listContacts,
   listIndustries,
+  listTags,
+  removeContactAttachment,
+  resolveContactAttachmentPath,
   saveCompany,
   saveContact,
   saveIndustry,
+  saveTag,
+  setContactFavorite,
   updateCompanyPin,
   updateContactPin
 } from './workspace'
@@ -26,19 +43,38 @@ import {
 
 let mainWindow: BrowserWindow | null = null
 
-/** No File/Edit/View/Window menus: app actions live in the renderer. macOS keeps a minimal app menu only. */
+/**
+ * macOS needs an Edit menu with standard roles (copy, paste, …). Without them, Cmd+V and related
+ * shortcuts often never reach the web contents. App-specific actions stay in the renderer UI.
+ */
 function installApplicationMenu(): void {
+  const editSubmenu: MenuItemConstructorOptions[] = [
+    { role: 'undo' },
+    { role: 'redo' },
+    { type: 'separator' },
+    { role: 'cut' },
+    { role: 'copy' },
+    { role: 'paste' },
+    { role: 'pasteAndMatchStyle' },
+    { role: 'delete' },
+    { type: 'separator' },
+    { role: 'selectAll' }
+  ]
+
   if (process.platform === 'darwin') {
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([
         {
           label: app.name,
           submenu: [{ role: 'quit' }]
-        }
+        },
+        { label: 'Edit', submenu: editSubmenu }
       ])
     )
   } else {
-    Menu.setApplicationMenu(null)
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([{ label: 'Edit', submenu: editSubmenu }])
+    )
   }
 }
 
@@ -153,6 +189,11 @@ app.whenReady().then(() => {
     if (!root) return []
     return listContacts(root)
   })
+  ipcMain.handle('data:listTags', () => {
+    const root = needRoot()
+    if (!root) return []
+    return listTags(root)
+  })
 
   ipcMain.handle('data:saveIndustry', (_e, payload: unknown) => {
     const root = needRoot()
@@ -178,6 +219,11 @@ app.whenReady().then(() => {
       urlChannels as Parameters<typeof saveContact>[3]
     )
   })
+  ipcMain.handle('data:saveTag', (_e, payload: unknown) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    return saveTag(root, payload as Parameters<typeof saveTag>[1])
+  })
   ipcMain.handle('data:updateContactPin', (_e, id: string, lat: number, lon: number) => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
@@ -202,6 +248,61 @@ app.whenReady().then(() => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     deleteContact(root, id)
+  })
+  ipcMain.handle('data:deleteTag', (_e, id: string) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    deleteTag(root, id)
+  })
+
+  ipcMain.handle('data:addContactAttachments', async (_e, contactId: string) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    if (typeof contactId !== 'string' || !contactId.trim()) throw new Error('Invalid contact')
+    const win = BrowserWindow.getFocusedWindow() ?? mainWindow
+    const r = await dialog.showOpenDialog(win!, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        {
+          name: 'Documents',
+          extensions: ['pdf', 'doc', 'docx', 'txt', 'rtf', 'png', 'jpg', 'jpeg', 'webp', 'md']
+        },
+        { name: 'All files', extensions: ['*'] }
+      ]
+    })
+    if (r.canceled || !r.filePaths.length) return { canceled: true as const }
+    const contact = addContactAttachmentsFromPaths(root, contactId, r.filePaths)
+    return { canceled: false as const, contact }
+  })
+
+  ipcMain.handle('data:removeContactAttachment', (_e, contactId: string, attachmentId: string) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    return removeContactAttachment(root, contactId, attachmentId)
+  })
+
+  ipcMain.handle('data:openContactAttachment', (_e, relativePath: string) => {
+    const root = needRoot()
+    if (!root || typeof relativePath !== 'string') return false
+    const full = resolveContactAttachmentPath(root, relativePath)
+    if (!full) return false
+    void shell.openPath(full)
+    return true
+  })
+
+  ipcMain.handle('data:revealContactAttachment', (_e, relativePath: string) => {
+    const root = needRoot()
+    if (!root || typeof relativePath !== 'string') return false
+    const full = resolveContactAttachmentPath(root, relativePath)
+    if (!full) return false
+    shell.showItemInFolder(full)
+    return true
+  })
+
+  ipcMain.handle('data:setContactFavorite', (_e, contactId: string, favorite: boolean) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    return setContactFavorite(root, contactId, favorite === true)
   })
 
   ipcMain.handle('data:exportWorkspace', async () => {
@@ -241,7 +342,37 @@ app.whenReady().then(() => {
 
   ipcMain.on('clipboard:readImageDataUrlSync', (event) => {
     try {
-      const img = clipboard.readImage()
+      let img = clipboard.readImage()
+      if (img.isEmpty()) {
+        for (const fmt of clipboard.availableFormats()) {
+          const lower = fmt.toLowerCase()
+          if (
+            !lower.includes('image') &&
+            lower !== 'public.png' &&
+            lower !== 'public.jpeg' &&
+            lower !== 'public.tiff' &&
+            lower !== 'public.gif' &&
+            !lower.endsWith('.png') &&
+            !lower.endsWith('.jpeg') &&
+            !lower.endsWith('.jpg') &&
+            !lower.endsWith('.gif') &&
+            !lower.endsWith('.webp')
+          ) {
+            continue
+          }
+          try {
+            const buf = clipboard.readBuffer(fmt)
+            if (buf.length === 0) continue
+            const fromBuf = nativeImage.createFromBuffer(buf)
+            if (!fromBuf.isEmpty()) {
+              img = fromBuf
+              break
+            }
+          } catch {
+            /* try next format */
+          }
+        }
+      }
       event.returnValue = img.isEmpty() ? null : img.toDataURL()
     } catch {
       event.returnValue = null
