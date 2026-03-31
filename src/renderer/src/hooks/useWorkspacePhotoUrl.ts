@@ -11,7 +11,6 @@ import {
 } from 'react'
 import {
   clipboardDataToPhotoDataUrl,
-  dataTransferHasExplicitImageMime,
   imageFileToPhotoDataUrl,
   normalizeEmbeddedPhotoDataUrl
 } from '../lib/contactPhoto'
@@ -61,24 +60,28 @@ export function useWorkspacePhotoUrl<T extends DraftWithPhoto>(
     [applyPhotoFile]
   )
 
-  const handlePasteCapture = useCallback(
-    (e: ClipboardEvent): void => {
-      if (!editingRef.current) return
+  const applyUrl = useCallback(
+    (url: string): void => {
+      setPhotoDndError(null)
+      setDraft((d) => {
+        const base = d ?? pasteBaseRef.current
+        if (!base) return d
+        return { ...base, photoUrl: url }
+      })
+    },
+    [setDraft]
+  )
 
-      const applyUrl = (url: string): void => {
-        setPhotoDndError(null)
-        setDraft((d) => {
-          const base = d ?? pasteBaseRef.current
-          if (!base) return d
-          return { ...base, photoUrl: url }
-        })
-      }
+  const fail = useCallback((err: unknown): void => {
+    setPhotoDndError(err instanceof Error ? err.message : 'Could not paste that image.')
+  }, [])
 
-      const fail = (err: unknown): void => {
-        setPhotoDndError(err instanceof Error ? err.message : 'Could not paste that image.')
-      }
-
-      /** Electron: copy-image often fills native clipboard while paste.clipboardData is empty. */
+  /**
+   * Electron: copied images often exist only on the native clipboard; `clipboardData` in the
+   * renderer is empty. This path is safe to run globally: text clipboard yields null here.
+   */
+  const tryConsumeNativeImage = useCallback(
+    (e: ClipboardEvent): boolean => {
       try {
         const native = window.book.readClipboardImageDataUrlSync()
         if (
@@ -89,11 +92,25 @@ export function useWorkspacePhotoUrl<T extends DraftWithPhoto>(
         ) {
           e.preventDefault()
           void normalizeEmbeddedPhotoDataUrl(native).then(applyUrl).catch(fail)
-          return
+          return true
         }
       } catch {
         /* ignore */
       }
+      return false
+    },
+    [applyUrl, fail]
+  )
+
+  /**
+   * Full clipboard handling for the photo drop zone only. Never call `preventDefault` before we
+   * know the payload is an image: macOS often exposes text pastes with `kind: file` items and an
+   * empty MIME type, which would block normal paste app-wide if we used a document listener.
+   */
+  const handlePhotoFieldPasteCapture = useCallback(
+    (e: ClipboardEvent): void => {
+      if (!editingRef.current) return
+      if (tryConsumeNativeImage(e)) return
 
       const cd = e.clipboardData
       if (!cd) return
@@ -109,37 +126,35 @@ export function useWorkspacePhotoUrl<T extends DraftWithPhoto>(
         return
       }
 
-      if (dataTransferHasExplicitImageMime(cd)) {
-        e.preventDefault()
-        void clipboardDataToPhotoDataUrl(cd)
-          .then((url) => {
-            if (url) applyUrl(url)
-          })
-          .catch(fail)
-        return
-      }
-
-      void clipboardDataToPhotoDataUrl(cd).then((url) => {
-        if (url) {
-          e.preventDefault()
-          applyUrl(url)
-        }
-      })
+      void clipboardDataToPhotoDataUrl(cd)
+        .then((url) => {
+          if (url) applyUrl(url)
+        })
+        .catch(fail)
     },
-    [setDraft]
+    [tryConsumeNativeImage, applyUrl, fail]
   )
 
   const onPhotoFieldPasteCapture = useCallback(
     (ev: ReactClipboardEvent) => {
-      handlePasteCapture(ev.nativeEvent)
+      handlePhotoFieldPasteCapture(ev.nativeEvent)
     },
-    [handlePasteCapture]
+    [handlePhotoFieldPasteCapture]
+  )
+
+  /** Only native bitmap: avoids hijacking text paste when focus is in inputs. */
+  const handleDocumentPasteCapture = useCallback(
+    (e: ClipboardEvent): void => {
+      if (!editingRef.current) return
+      tryConsumeNativeImage(e)
+    },
+    [tryConsumeNativeImage]
   )
 
   useEffect(() => {
-    document.addEventListener('paste', handlePasteCapture, true)
-    return () => document.removeEventListener('paste', handlePasteCapture, true)
-  }, [handlePasteCapture])
+    document.addEventListener('paste', handleDocumentPasteCapture, true)
+    return () => document.removeEventListener('paste', handleDocumentPasteCapture, true)
+  }, [handleDocumentPasteCapture])
 
   return useMemo(
     () => ({
