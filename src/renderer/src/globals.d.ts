@@ -25,6 +25,7 @@ export interface BookBridge {
   updateCompanyPin: (id: string, latitude: number, longitude: number) => Promise<Company>
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
   openExternal: (url: string) => Promise<void>
+  readClipboardImageDataUrlSync: () => string | null
 }
 
 declare global {

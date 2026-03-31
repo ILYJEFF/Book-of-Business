@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { loadSettings, saveSettings } from './store'
@@ -148,6 +148,15 @@ app.whenReady().then(() => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     deleteContact(root, id)
+  })
+
+  ipcMain.on('clipboard:readImageDataUrlSync', (event) => {
+    try {
+      const img = clipboard.readImage()
+      event.returnValue = img.isEmpty() ? null : img.toDataURL()
+    } catch {
+      event.returnValue = null
+    }
   })
 
   ipcMain.handle('shell:openExternal', async (_e, url: string) => {

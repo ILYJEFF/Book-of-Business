@@ -27,6 +27,8 @@ export interface BookAPI {
   updateCompanyPin: (id: string, latitude: number, longitude: number) => Promise<Company>
   geocodeSearch: (query: string) => Promise<GeocodeResult | null>
   openExternal: (url: string) => Promise<void>
+  /** macOS / Electron: image on clipboard when `clipboardData` in the renderer is empty. */
+  readClipboardImageDataUrlSync: () => string | null
 }
 
 const api: BookAPI = {
@@ -48,7 +50,11 @@ const api: BookAPI = {
   updateCompanyPin: (id, latitude, longitude) =>
     ipcRenderer.invoke('data:updateCompanyPin', id, latitude, longitude),
   geocodeSearch: (query) => ipcRenderer.invoke('geo:search', query),
-  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
+  readClipboardImageDataUrlSync: () => {
+    const v = ipcRenderer.sendSync('clipboard:readImageDataUrlSync') as string | null | undefined
+    return v ?? null
+  }
 }
 
 contextBridge.exposeInMainWorld('book', api)
