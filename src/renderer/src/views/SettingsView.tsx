@@ -8,10 +8,9 @@ export default function SettingsView(): React.ReactElement {
   return (
     <div className="settings-page scroll-y">
       <div className="settings-inner">
-        <h2 className="settings-title">Your library</h2>
-        <p className="muted" style={{ marginTop: 12, lineHeight: 1.65, fontSize: 15 }}>
-          Data stays in the folder you choose. Each record is a small JSON file you can inspect, diff, or archive with
-          any tool.
+        <h2 className="settings-title">Library folder</h2>
+        <p className="muted" style={{ marginTop: 12, lineHeight: 1.6, fontSize: 14 }}>
+          One folder on disk. Each record is a JSON file. Point the app anywhere you want.
         </p>
 
         <div className="settings-card">
@@ -36,11 +35,10 @@ export default function SettingsView(): React.ReactElement {
         </div>
 
         <div className="settings-section">
-          <h3 className="settings-h3">Cloud sync</h3>
-          <p className="muted small" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            On macOS, use a folder inside iCloud Drive. On Windows, use OneDrive. The app only touches files in that
-            tree. If two devices edit the same file at once, your sync provider decides how to merge, so avoid parallel
-            edits on the same person when possible.
+          <h3 className="settings-h3">Sync</h3>
+          <p className="muted small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+            Put the folder inside iCloud, OneDrive, Dropbox, etc. if you want copies elsewhere. Same-file edits on two
+            machines are up to the sync tool, not this app.
           </p>
         </div>
 

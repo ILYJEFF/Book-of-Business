@@ -134,9 +134,9 @@ export default function CompaniesView(): React.ReactElement {
       <div className="scroll-y detail-column">
         {!display && (
           <div className="empty-canvas">
-            <div className="empty-canvas-visual" aria-hidden />
-            <h2 className="empty-canvas-title">Open a company record</h2>
-            <p className="empty-canvas-text">Choose a row on the left or create a company to track sites, industry, and notes.</p>
+            <div className="empty-canvas-rule" aria-hidden />
+            <h2 className="empty-canvas-title">No company selected</h2>
+            <p className="empty-canvas-text">Pick from the list or add a company. One file per org.</p>
             <div className="empty-canvas-actions">
               <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
                 New company

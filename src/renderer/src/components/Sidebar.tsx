@@ -1,11 +1,10 @@
 import { useApp } from '../context/AppContext'
-import { IconBuilding, IconContacts, IconLayers, IconLibrary } from './NavIcons'
 
 const items = [
-  { id: 'contacts' as const, label: 'Contacts', hint: 'People you know', Icon: IconContacts },
-  { id: 'companies' as const, label: 'Companies', hint: 'Organizations', Icon: IconBuilding },
-  { id: 'industries' as const, label: 'Industries', hint: 'Sectors & markets', Icon: IconLayers },
-  { id: 'settings' as const, label: 'Library', hint: 'Folder & sync', Icon: IconLibrary }
+  { id: 'contacts' as const, label: 'Contacts' },
+  { id: 'companies' as const, label: 'Companies' },
+  { id: 'industries' as const, label: 'Industries' },
+  { id: 'settings' as const, label: 'Library' }
 ]
 
 export default function Sidebar(): React.ReactElement {
@@ -19,43 +18,29 @@ export default function Sidebar(): React.ReactElement {
 
   return (
     <aside className="sidebar">
-      <div>
-        <div className="sidebar-brand-mark" aria-hidden>
-          B
-        </div>
-        <div className="sidebar-brand-kicker">Book of Business</div>
-        <div className="sidebar-brand-title">Command center</div>
-        <p className="sidebar-brand-sub">Your relationships, stored as files you own.</p>
-      </div>
+      <header className="sidebar-header">
+        <h1 className="sidebar-title">Book of Business</h1>
+        <p className="sidebar-tag">Local files. Your folder.</p>
+      </header>
 
-      <nav className="sidebar-nav" aria-label="Primary">
+      <nav className="sidebar-nav" aria-label="Sections">
         {items.map((it) => {
           const active = section === it.id
           return (
             <button
               key={it.id}
               type="button"
-              className={`sidebar-item focus-ring${active ? ' sidebar-item--active' : ''}`}
+              className={`sidebar-link focus-ring${active ? ' sidebar-link--active' : ''}`}
               onClick={() => setSection(it.id)}
             >
-              <span className="sidebar-item-icon">
-                <it.Icon />
-              </span>
-              <span className="sidebar-item-body">
-                <span className="sidebar-item-label">{it.label}</span>
-                <span className="sidebar-item-hint">{it.hint}</span>
-              </span>
-              {it.id !== 'settings' && (
-                <span className="sidebar-item-count">{counts[it.id] ?? 0}</span>
-              )}
+              <span>{it.label}</span>
+              {it.id !== 'settings' && <span className="sidebar-link-count">{counts[it.id] ?? 0}</span>}
             </button>
           )
         })}
       </nav>
 
-      <p className="sidebar-foot">
-        Plain JSON on disk. Drop the folder into iCloud or OneDrive if you want it everywhere.
-      </p>
+      <p className="sidebar-foot">JSON on disk. Sync the folder if you want copies elsewhere.</p>
     </aside>
   )
 }

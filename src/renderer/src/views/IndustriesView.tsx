@@ -130,9 +130,9 @@ export default function IndustriesView(): React.ReactElement {
       <div className="scroll-y detail-column">
         {!display && (
           <div className="empty-canvas">
-            <div className="empty-canvas-visual" aria-hidden />
-            <h2 className="empty-canvas-title">Shape your taxonomy</h2>
-            <p className="empty-canvas-text">Industries help you scan the book at a glance. Select one on the left or add your first.</p>
+            <div className="empty-canvas-rule" aria-hidden />
+            <h2 className="empty-canvas-title">No industry selected</h2>
+            <p className="empty-canvas-text">Select a sector from the list or create one.</p>
             <div className="empty-canvas-actions">
               <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
                 New industry

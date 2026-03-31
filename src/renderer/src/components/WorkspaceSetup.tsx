@@ -7,16 +7,15 @@ export default function WorkspaceSetup(): React.ReactElement {
     <div className="welcome-bg">
       <div className="welcome-card">
         <div className="welcome-card-inner">
-          <div className="welcome-icon" aria-hidden />
-          <h1 className="welcome-title">Choose your library folder</h1>
+          <h1 className="welcome-title">Choose a folder</h1>
           <p className="welcome-lead">
-            Industries, companies, and contacts are saved as readable JSON files. Pick a folder on your machine, or one
-            you already sync.
+            Data is JSON files under that path. Use an empty folder, or one inside Dropbox, iCloud, OneDrive, whatever
+            you already trust.
           </p>
           <ul className="welcome-list">
-            <li>We create industries, companies, and contacts subfolders.</li>
-            <li>You can browse, diff, or back up with any tool.</li>
-            <li>No vendor cloud. No account gate.</li>
+            <li>Creates industries, companies, contacts subfolders.</li>
+            <li>You can edit or back up files outside this app.</li>
+            <li>No sign-in here.</li>
           </ul>
           <div className="welcome-actions">
             <button

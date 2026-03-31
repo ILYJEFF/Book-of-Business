@@ -201,16 +201,14 @@ export default function ContactsView(): React.ReactElement {
       <div className="scroll-y detail-column">
         {!displayDraft && !creating && (
           <div className="empty-canvas">
-            <div className="empty-canvas-visual" aria-hidden />
-            <h2 className="empty-canvas-title">Pick someone to open their file</h2>
-            <p className="empty-canvas-text">
-              Contacts are plain JSON in your library folder. Select a row on the left, or start fresh.
-            </p>
+            <div className="empty-canvas-rule" aria-hidden />
+            <h2 className="empty-canvas-title">No row selected</h2>
+            <p className="empty-canvas-text">Open an entry from the list, or add one. Each person is one JSON file in your folder.</p>
             <div className="empty-canvas-actions">
               <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
                 New contact
               </button>
-              <span className="empty-canvas-hint">Saved automatically on your machine</span>
+              <span className="empty-canvas-hint">Writes to disk when you save</span>
             </div>
           </div>
         )}
@@ -221,7 +219,7 @@ export default function ContactsView(): React.ReactElement {
                 <div className="avatar avatar--lg">{initials(displayDraft as Contact)}</div>
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
-                  <p className="detail-meta">{creating ? 'New entry' : 'Stored locally as JSON in your library'}</p>
+                  <p className="detail-meta">{creating ? 'New entry' : 'JSON file in your folder'}</p>
                 </div>
               </div>
               <div className="detail-actions">
