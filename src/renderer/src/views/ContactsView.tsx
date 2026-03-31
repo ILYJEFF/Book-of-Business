@@ -35,6 +35,7 @@ export default function ContactsView(): React.ReactElement {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Partial<Contact> | null>(null)
   const [saving, setSaving] = useState(false)
+  const [photoRefreshing, setPhotoRefreshing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const companyMap = useMemo(
@@ -138,6 +139,20 @@ export default function ContactsView(): React.ReactElement {
     }
   }, [draft, refresh])
 
+  const refreshLinkedinPhoto = useCallback(async () => {
+    const id = draft?.id
+    const li = draft?.linkedinUrl?.trim()
+    if (!id || !li) return
+    setPhotoRefreshing(true)
+    try {
+      const updated = await window.book.refreshContactLinkedinPhoto(id)
+      await refresh({ background: true })
+      if (updated) setDraft({ ...updated })
+    } finally {
+      setPhotoRefreshing(false)
+    }
+  }, [draft?.id, draft?.linkedinUrl, refresh])
+
   const remove = useCallback(async () => {
     if (!selected) return
     await window.book.deleteContact(selected.id)
@@ -197,7 +212,7 @@ export default function ContactsView(): React.ReactElement {
                 onClick={() => openDetail(c)}
                 className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
               >
-                <ContactAvatar contact={c} size="sm" />
+                <ContactAvatar key={c.id} contact={c} size="sm" />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="list-row-title">{contactDisplayName(c)}</div>
                   <div className="list-row-sub">
@@ -244,7 +259,7 @@ export default function ContactsView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                <ContactAvatar contact={displayDraft as Contact} size="lg" />
+                <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="lg" />
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
                   <p className="detail-meta">
@@ -410,9 +425,23 @@ export default function ContactsView(): React.ReactElement {
                     onChange={(e) => editing && setDraft((d) => (d ? { ...d, linkedinUrl: e.target.value } : d))}
                   />
                   {editing && (
-                    <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
-                      After you save, we try to load the profile photo from LinkedIn’s public page (initials if it cannot).
-                    </p>
+                    <div className="linkedin-photo-hint muted small" style={{ marginTop: 6, marginBottom: 0 }}>
+                      <p style={{ margin: '0 0 8px' }}>
+                        After you save, we try to load the photo from LinkedIn’s public preview page. If it did not appear,
+                        use the button below (saved contacts only).
+                      </p>
+                      {(displayDraft as Contact).id && (displayDraft as Contact).linkedinUrl?.trim() && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost focus-ring"
+                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          disabled={saving || photoRefreshing}
+                          onClick={() => void refreshLinkedinPhoto()}
+                        >
+                          {photoRefreshing ? 'Fetching…' : 'Fetch LinkedIn photo now'}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div>

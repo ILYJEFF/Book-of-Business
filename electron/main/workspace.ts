@@ -310,6 +310,25 @@ export async function saveContact(
   return row
 }
 
+export async function refreshContactLinkedinPhoto(root: string, id: string): Promise<Contact | null> {
+  ensureWorkspace(root)
+  const p = join(root, 'contacts', `${id}.json`)
+  if (!existsSync(p)) return null
+  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
+  const li = cur.linkedinUrl?.trim()
+  if (!li) return cur
+  const fetched = await fetchLinkedInProfilePhotoUrl(li)
+  const photoUrl = fetched ?? cur.photoUrl
+  const next: Contact = {
+    ...cur,
+    photoUrl,
+    updatedAt: now()
+  }
+  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
+  touchManifest(root)
+  return next
+}
+
 export function updateContactPin(root: string, id: string, latitude: number, longitude: number): Contact {
   ensureWorkspace(root)
   const p = join(root, 'contacts', `${id}.json`)

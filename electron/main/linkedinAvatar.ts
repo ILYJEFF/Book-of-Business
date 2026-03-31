@@ -14,10 +14,15 @@ export function normalizeLinkedInProfileUrl(raw: string): string | null {
   try {
     const u = new URL(t.startsWith('http') ? t : `https://${t}`)
     const host = u.hostname.replace(/^www\./i, '').toLowerCase()
-    if (host !== 'linkedin.com' && host !== 'www.linkedin.com') return null
-    const m = u.pathname.match(/\/in\/([^/]+)/i)
+    if (host !== 'linkedin.com' && !host.endsWith('.linkedin.com')) return null
+    const m = u.pathname.match(/\/in\/([^/?#]+)/i)
     if (!m?.[1]) return null
-    const slug = decodeURIComponent(m[1]).replace(/\/+$/, '')
+    let slug: string
+    try {
+      slug = decodeURIComponent(m[1]).replace(/\/+$/, '')
+    } catch {
+      slug = m[1].replace(/\/+$/, '')
+    }
     if (!slug) return null
     return `https://www.linkedin.com/in/${slug}/`
   } catch {
@@ -25,26 +30,52 @@ export function normalizeLinkedInProfileUrl(raw: string): string | null {
   }
 }
 
-function extractOgImage(html: string): string | null {
-  const head = html.slice(0, 400_000)
-  const a = head.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
-  if (a?.[1]) return a[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-  const b = head.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i)
-  if (b?.[1]) return b[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-  return null
+function decodeMetaContent(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
 }
 
 function isLikelyProfilePhotoUrl(url: string): boolean {
   try {
     const u = new URL(url)
     if (!u.hostname.endsWith('licdn.com')) return false
+    const p = u.pathname.toLowerCase()
+    if (p.includes('article-cover') || p.includes('company-logo') || p.includes('school-logo')) return false
     return (
-      u.pathname.includes('profile-displayphoto') ||
-      u.pathname.includes('profile-displaybackground')
+      p.includes('profile-displayphoto') ||
+      p.includes('profile-displaybackground') ||
+      (p.includes('/dms/image/') && p.includes('profile'))
     )
   } catch {
     return false
   }
+}
+
+/** Collect og:image and og:image:secure_url values; prefer a licdn profile headshot. */
+function extractBestProfileImage(html: string): string | null {
+  const max = Math.min(html.length, 1_200_000)
+  const chunk = html.slice(0, max)
+  const candidates: string[] = []
+  const pushUrl = (raw: string | undefined) => {
+    if (!raw) return
+    const u = decodeMetaContent(raw).trim()
+    if (u.startsWith('https://') || u.startsWith('http://')) candidates.push(u)
+  }
+
+  const re1 =
+    /<meta[^>]*property=["'](?:og:image|og:image:secure_url)["'][^>]*content=["']([^"']*)["'][^>]*>/gi
+  for (const m of chunk.matchAll(re1)) pushUrl(m[1])
+
+  const re2 =
+    /<meta[^>]*content=["']([^"']*)["'][^>]*property=["'](?:og:image|og:image:secure_url)["'][^>]*>/gi
+  for (const m of chunk.matchAll(re2)) pushUrl(m[1])
+
+  for (const c of candidates) {
+    if (isLikelyProfilePhotoUrl(c)) return c
+  }
+  return null
 }
 
 export async function fetchLinkedInProfilePhotoUrl(linkedinUrl: string): Promise<string | null> {
@@ -75,7 +106,6 @@ export async function fetchLinkedInProfilePhotoUrl(linkedinUrl: string): Promise
     return null
   }
 
-  const og = extractOgImage(html)
-  if (!og || !isLikelyProfilePhotoUrl(og)) return null
-  return og
+  const og = extractBestProfileImage(html)
+  return og ?? null
 }

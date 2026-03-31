@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Contact } from '../../../shared/types'
 import { initials } from '../lib/format'
 
@@ -11,6 +11,11 @@ export default function ContactAvatar({
 }): React.ReactElement {
   const url = contact.photoUrl?.trim()
   const [imgFailed, setImgFailed] = useState(false)
+
+  useEffect(() => {
+    setImgFailed(false)
+  }, [contact.id, contact.photoUrl])
+
   const showPhoto = Boolean(url) && !imgFailed
 
   const base = `avatar avatar--${size}`

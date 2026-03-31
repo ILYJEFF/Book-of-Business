@@ -11,6 +11,7 @@ import {
   listCompanies,
   listContacts,
   listIndustries,
+  refreshContactLinkedinPhoto,
   saveCompany,
   saveContact,
   saveIndustry,
@@ -148,6 +149,12 @@ app.whenReady().then(() => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     deleteContact(root, id)
+  })
+
+  ipcMain.handle('data:refreshContactLinkedinPhoto', async (_e, id: string) => {
+    const root = needRoot()
+    if (!root) throw new Error('No workspace')
+    return refreshContactLinkedinPhoto(root, id)
   })
 
   ipcMain.handle('shell:openExternal', async (_e, url: string) => {
