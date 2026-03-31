@@ -48,6 +48,25 @@ export default function CompaniesView(): React.ReactElement {
     setConfirmDelete(false)
   }, [])
 
+  const startCreateAtSharedPin = useCallback(
+    (p: { latitude: number; longitude: number; address?: string }) => {
+      setSelectedId(null)
+      setCreating(true)
+      setEditing(true)
+      setConfirmDelete(false)
+      setDraft({
+        name: '',
+        website: '',
+        industryId: '',
+        notes: '',
+        address: (p.address ?? '').trim() || '',
+        latitude: p.latitude,
+        longitude: p.longitude
+      })
+    },
+    []
+  )
+
   const startEdit = useCallback((c: Company) => {
     setCreating(false)
     setSelectedId(c.id)
@@ -276,7 +295,18 @@ export default function CompaniesView(): React.ReactElement {
                   })
                 }}
               />
-              <AddressFields<Company> draft={display} editing={editing} setDraft={setDraft} mapVariant="company" />
+              <AddressFields<Company>
+                draft={display}
+                editing={editing}
+                setDraft={setDraft}
+                mapVariant="company"
+                sharePinAction={{
+                  label: 'New company at this pin',
+                  title:
+                    'Start another company with these map coordinates and the same address line. Save or cancel open edits first if you need them.',
+                  onClick: startCreateAtSharedPin
+                }}
+              />
               <div>
                 <label className="field-label" htmlFor="co-notes">
                   Notes

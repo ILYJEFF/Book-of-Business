@@ -7,16 +7,21 @@ interface Draft {
   longitude?: number
 }
 
+export type SharePinPayload = { latitude: number; longitude: number; address?: string }
+
 export default function AddressFields<T extends Draft>({
   draft,
   editing,
   setDraft,
-  mapVariant = 'contact'
+  mapVariant = 'contact',
+  sharePinAction
 }: {
   draft: Partial<T> & Draft
   editing: boolean
   setDraft: Dispatch<SetStateAction<Partial<T> | null>>
   mapVariant?: 'contact' | 'company'
+  /** Adds a control next to the coordinate summary to start another record at the same pin. */
+  sharePinAction?: { label: string; title?: string; onClick: (p: SharePinPayload) => void }
 }): React.ReactElement {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -203,15 +208,28 @@ export default function AddressFields<T extends Draft>({
           {err}
         </p>
       )}
-      {!editing && hasPin && (
-        <p className="muted small" style={{ marginTop: 10, marginBottom: 0 }}>
-          Map pin: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
-        </p>
-      )}
-      {editing && hasPin && (
-        <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-          Pin set: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
-        </p>
+      {hasPin && (
+        <div className="address-pin-coords-row">
+          <p className="muted small address-pin-coords-text">
+            {!editing ? 'Map pin' : 'Pin set'}: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
+          </p>
+          {sharePinAction && (
+            <button
+              type="button"
+              className="btn btn-ghost address-pin-share-btn focus-ring"
+              title={sharePinAction.title}
+              onClick={() =>
+                sharePinAction.onClick({
+                  latitude: draft.latitude!,
+                  longitude: draft.longitude!,
+                  address: draft.address
+                })
+              }
+            >
+              {sharePinAction.label}
+            </button>
+          )}
+        </div>
       )}
       {hasPin && (
         <AddressPinMap

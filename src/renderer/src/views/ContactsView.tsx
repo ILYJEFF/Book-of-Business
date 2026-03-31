@@ -62,6 +62,23 @@ export default function ContactsView(): React.ReactElement {
     setDraft({ ...emptyContact(), id: undefined })
   }, [])
 
+  const startCreateAtSharedPin = useCallback(
+    (p: { latitude: number; longitude: number; address?: string }) => {
+      setSelectedId(null)
+      setCreating(true)
+      setEditing(true)
+      setConfirmDelete(false)
+      setDraft({
+        ...emptyContact(),
+        id: undefined,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        address: (p.address ?? '').trim() || ''
+      })
+    },
+    []
+  )
+
   const startEdit = useCallback((c: Contact) => {
     setCreating(false)
     setSelectedId(c.id)
@@ -378,7 +395,17 @@ export default function ContactsView(): React.ReactElement {
                 </div>
               </div>
 
-              <AddressFields<Contact> draft={displayDraft} editing={editing} setDraft={setDraft} />
+              <AddressFields<Contact>
+                draft={displayDraft}
+                editing={editing}
+                setDraft={setDraft}
+                sharePinAction={{
+                  label: 'New contact at this pin',
+                  title:
+                    'Start another contact with these map coordinates and the same address line. Save or cancel open edits first if you need them.',
+                  onClick: startCreateAtSharedPin
+                }}
+              />
 
               <EmailsBlock draft={displayDraft as Contact} editing={editing} setDraft={setDraft} />
               <PhonesBlock draft={displayDraft as Contact} editing={editing} setDraft={setDraft} />

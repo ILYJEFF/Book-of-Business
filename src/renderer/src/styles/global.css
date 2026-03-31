@@ -372,6 +372,23 @@ a:hover {
 .map-leaflet.leaflet-container {
   font-family: var(--font-sans);
 }
+.address-pin-coords-row {
+  margin-top: 8px;
+  margin-bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.address-pin-coords-text {
+  margin: 0;
+}
+.address-pin-share-btn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
 .map-marker-wrap {
   background: transparent !important;
   border: none !important;
