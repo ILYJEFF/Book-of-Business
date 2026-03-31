@@ -5,23 +5,23 @@
   --font-display: 'Literata', ui-serif, Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --bg-void: #070605;
-  --bg-base: #0f0e0c;
-  --bg-sunk: #0a0908;
-  --bg-raised: #161412;
-  --bg-panel: #1c1916;
-  --bg-panel-2: #221f1b;
-  --bg-hover: #2a2621;
-  --bg-active: #34302a;
-  --divide: rgba(244, 238, 228, 0.09);
-  --border-hairline: rgba(244, 238, 228, 0.06);
-  --border-subtle: rgba(244, 238, 228, 0.1);
-  --border-medium: rgba(244, 238, 228, 0.15);
-  --border-strong: rgba(244, 238, 228, 0.22);
-  --text-primary: #f7f1e8;
-  --text-secondary: #c4bcb2;
-  --text-muted: #948c84;
-  --text-faint: #6a645d;
+  --bg-void: #1a1714;
+  --bg-base: #26221e;
+  --bg-sunk: #201d19;
+  --bg-raised: #2f2b26;
+  --bg-panel: #36322c;
+  --bg-panel-2: #3d3832;
+  --bg-hover: #4a443d;
+  --bg-active: #544e46;
+  --divide: rgba(252, 248, 242, 0.11);
+  --border-hairline: rgba(252, 248, 242, 0.08);
+  --border-subtle: rgba(252, 248, 242, 0.13);
+  --border-medium: rgba(252, 248, 242, 0.18);
+  --border-strong: rgba(252, 248, 242, 0.26);
+  --text-primary: #faf6f0;
+  --text-secondary: #c9c2b8;
+  --text-muted: #9a938a;
+  --text-faint: #736c65;
   --accent: #e3bc6e;
   --accent-dim: rgba(227, 188, 110, 0.12);
   --accent-dim-strong: rgba(227, 188, 110, 0.2);
@@ -34,7 +34,7 @@
   --radius-lg: 6px;
   --radius-xl: 8px;
   --radius-pane: 0;
-  --shadow-float: 0 24px 64px rgba(0, 0, 0, 0.65);
+  --shadow-float: 0 20px 48px rgba(0, 0, 0, 0.35);
   --pane-shadow: none;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -93,18 +93,18 @@ a:hover {
 
 .scroll-y {
   overflow-y: auto;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
   scrollbar-width: thin;
 }
 .scroll-y::-webkit-scrollbar {
   width: 7px;
 }
 .scroll-y::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
   border-radius: 8px;
 }
 .scroll-y::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.28);
 }
 
 .focus-ring:focus-visible {
@@ -135,8 +135,8 @@ a:hover {
 }
 .btn-primary {
   background: #ebe4d8;
-  color: #0a0908;
-  border-color: rgba(255, 255, 255, 0.12);
+  color: #1c1815;
+  border-color: rgba(255, 255, 255, 0.18);
   font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: none;
@@ -146,8 +146,8 @@ a:hover {
 }
 .btn-primary:hover:not(:disabled) {
   background: #f5f0e8;
-  color: #0a0908;
-  border-color: rgba(255, 255, 255, 0.18);
+  color: #1c1815;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 .btn-primary:active:not(:disabled) {
   background: #ddd6c9;
@@ -1385,7 +1385,7 @@ a:hover {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 19, 17, 0.65);
+  background: rgba(30, 27, 24, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1453,8 +1453,8 @@ a:hover {
   margin-top: 12px;
   padding: 16px 18px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-hairline);
+  background: var(--bg-sunk);
+  border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 12px;
