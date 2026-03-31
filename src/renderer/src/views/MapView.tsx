@@ -13,9 +13,25 @@ function googleMapsSearchUrl(company: Company, lat: number, lon: number): string
 const PIN_CONTACT = '#9a6b3c'
 const PIN_COMPANY = '#5f735f'
 
-/** Same key = same screen dot (stacked pins). */
+/** Same key = same screen dot when no mailing line is stored (coordinate stack). */
 function coordKey(lat: number, lon: number): string {
   return `${lat.toFixed(6)},${lon.toFixed(6)}`
+}
+
+/** Normalize free-text address so minor spacing or case differences still match. */
+function normalizeAddressLine(addr: string | undefined): string | null {
+  const t = addr?.trim().replace(/\s+/g, ' ').toLowerCase()
+  return t || null
+}
+
+/**
+ * Stack key: same normalized address string shares one pin (coordinates are averaged).
+ * Records with no address line still stack only by matching coordinates.
+ */
+function stackKeyForPlotted(entity: { address?: string; latitude: number; longitude: number }): string {
+  const line = normalizeAddressLine(entity.address)
+  if (line) return `addr:${line}`
+  return `coord:${coordKey(entity.latitude, entity.longitude)}`
 }
 
 interface PinStack {
@@ -25,24 +41,41 @@ interface PinStack {
   companies: Company[]
 }
 
+interface StackAcc {
+  contacts: Contact[]
+  companies: Company[]
+  lats: number[]
+  lons: number[]
+}
+
 function buildPinStacks(plottedContacts: Contact[], plottedCompanies: Company[]): PinStack[] {
-  const byKey = new Map<string, PinStack>()
-  const touch = (lat: number, lon: number) => {
-    const key = coordKey(lat, lon)
+  const byKey = new Map<string, StackAcc>()
+  const touch = (key: string, lat: number, lon: number): StackAcc => {
     let s = byKey.get(key)
     if (!s) {
-      s = { lat, lon, contacts: [], companies: [] }
+      s = { contacts: [], companies: [], lats: [], lons: [] }
       byKey.set(key, s)
     }
+    s.lats.push(lat)
+    s.lons.push(lon)
     return s
   }
   for (const c of plottedContacts) {
-    touch(c.latitude!, c.longitude!).contacts.push(c)
+    const lat = c.latitude!
+    const lon = c.longitude!
+    touch(stackKeyForPlotted({ address: c.address, latitude: lat, longitude: lon }), lat, lon).contacts.push(c)
   }
   for (const c of plottedCompanies) {
-    touch(c.latitude!, c.longitude!).companies.push(c)
+    const lat = c.latitude!
+    const lon = c.longitude!
+    touch(stackKeyForPlotted({ address: c.address, latitude: lat, longitude: lon }), lat, lon).companies.push(c)
   }
-  return [...byKey.values()]
+  return [...byKey.values()].map((acc) => {
+    const n = acc.lats.length
+    const lat = acc.lats.reduce((a, b) => a + b, 0) / n
+    const lon = acc.lons.reduce((a, b) => a + b, 0) / n
+    return { lat, lon, contacts: acc.contacts, companies: acc.companies }
+  })
 }
 
 function stackIcon(contactCount: number, companyCount: number): L.DivIcon {
@@ -284,9 +317,10 @@ export default function MapView(): React.ReactElement {
           </ul>
         </div>
         <p className="map-toolbar-note muted small">
-          Same coordinates share one dot (count badge when stacked). Hover a dot for everyone there. People: click opens the
-          profile. Companies: click opens a menu with Open and Google Maps (photos and hours). Drag moves every record at that
-          pin.
+          Same mailing address shares one dot (even if geocodes differ slightly; position is averaged). Records with no address
+          line still stack by matching coordinates. Count badge when stacked. Hover for everyone there. People: click opens the
+          profile when alone; otherwise pick from the menu. Companies: menu with Open and Google Maps. Drag updates every record
+          in that stack.
         </p>
       </div>
       <div className="map-frame">
