@@ -733,11 +733,12 @@ function EmailsBlock({
   return (
     <div>
       <span className="field-label">Email addresses</span>
-      <div className="stack-8">
+      <div className="stack-8 stack-8--channel-fields">
         {list.map((em, idx) => (
-          <div key={idx} className="stack-8-row">
+          <div key={idx} className="channel-field-row">
             <LabeledContactChannelRow
               kind="email"
+              menuId={`contact-email-label-${idx}`}
               disabled={!editing}
               label={em.label || 'Other'}
               value={em.value}
@@ -822,15 +823,16 @@ function PhonesBlock({
   return (
     <div>
       <span className="field-label">Phone numbers</span>
-      <div className="stack-8">
+      <div className="stack-8 stack-8--channel-fields">
         {list.map((p, idx) => (
-          <div key={idx} className="stack-8-row">
+          <div key={idx} className="channel-field-row">
             <LabeledContactChannelRow
               kind="phone"
+              menuId={`contact-phone-label-${idx}`}
               disabled={!editing}
               label={p.label || 'Other'}
               value={p.value}
-              valuePlaceholder="+1 …"
+              valuePlaceholder="(555) 555-0100"
               onLabelChange={(next) => {
                 if (!editing) return
                 setDraft((d) => {

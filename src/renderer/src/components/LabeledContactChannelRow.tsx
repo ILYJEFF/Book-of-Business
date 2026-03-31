@@ -1,15 +1,13 @@
 import type { ReactElement } from 'react'
 import { formatNanpPhone } from '../../../shared/phoneFormat'
-import {
-  CUSTOM_LABEL_OPTION,
-  EMAIL_LABEL_PRESETS,
-  PHONE_LABEL_PRESETS
-} from '../lib/contactChannelLabels'
+import { EMAIL_LABEL_PRESETS, PHONE_LABEL_PRESETS } from '../lib/contactChannelLabels'
+import ChannelLabelMenu from './ChannelLabelMenu'
 
 type Kind = 'email' | 'phone'
 
 export default function LabeledContactChannelRow({
   kind,
+  menuId,
   label,
   value,
   disabled,
@@ -18,6 +16,8 @@ export default function LabeledContactChannelRow({
   onValueChange
 }: {
   kind: Kind
+  /** Stable id for the label picker (accessibility). */
+  menuId: string
   label: string
   value: string
   disabled: boolean
@@ -27,7 +27,6 @@ export default function LabeledContactChannelRow({
 }): ReactElement {
   const presets = kind === 'email' ? EMAIL_LABEL_PRESETS : PHONE_LABEL_PRESETS
   const inPreset = (presets as readonly string[]).includes(label)
-  const selectValue = inPreset ? label : CUSTOM_LABEL_OPTION
 
   if (disabled) {
     return (
@@ -36,7 +35,7 @@ export default function LabeledContactChannelRow({
           {label || '—'}
         </span>
         <input
-          className="text-input focus-ring flex-1 min-w-0"
+          className="channel-value-input focus-ring flex-1 min-w-0"
           disabled
           readOnly
           value={kind === 'phone' ? formatNanpPhone(value) : value}
@@ -49,40 +48,23 @@ export default function LabeledContactChannelRow({
   return (
     <div className="channel-combo-inner">
       <div className="channel-label-controls">
-        <select
-          className="text-input focus-ring channel-label-select"
-          aria-label={kind === 'email' ? 'Email label' : 'Phone label'}
-          value={selectValue}
-          onChange={(e) => {
-            const v = e.target.value
-            if (v === CUSTOM_LABEL_OPTION) {
-              onLabelChange('')
-              return
-            }
-            onLabelChange(v)
-          }}
-        >
-          {presets.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-          <option value={CUSTOM_LABEL_OPTION}>{CUSTOM_LABEL_OPTION}</option>
-        </select>
+        <ChannelLabelMenu id={menuId} label={label} presets={presets} onChange={onLabelChange} />
         {!inPreset && (
           <input
-            className="text-input focus-ring channel-custom-label"
-            placeholder="Custom label"
+            className="channel-custom-label-input focus-ring"
+            placeholder="Label"
             value={label}
             onChange={(e) => onLabelChange(e.target.value)}
+            aria-label="Custom label"
           />
         )}
       </div>
       <input
-        className="text-input focus-ring flex-1 min-w-0"
+        className="channel-value-input focus-ring flex-1 min-w-0"
         type={kind === 'phone' ? 'tel' : 'text'}
-        inputMode={kind === 'phone' ? 'tel' : undefined}
-        autoComplete={kind === 'phone' ? 'tel' : undefined}
+        inputMode={kind === 'phone' ? 'tel' : 'email'}
+        autoComplete={kind === 'phone' ? 'tel' : 'email'}
+        spellCheck={kind === 'email'}
         placeholder={valuePlaceholder}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
