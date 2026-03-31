@@ -69,6 +69,8 @@ export interface GeocodeResult {
   lat: number
   lon: number
   displayName: string
+  /** Single-line address built from structured parts when the geocoder returns them */
+  formattedAddress?: string
 }
 
 export interface WorkspaceManifest {

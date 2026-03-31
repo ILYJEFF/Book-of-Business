@@ -1929,6 +1929,66 @@ a:hover {
   padding: 24px 22px 20px;
   box-shadow: var(--shadow-float);
 }
+.modal-panel--geocode {
+  width: min(520px, 100%);
+}
+.address-verify-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.address-verify-lead {
+  margin: 12px 0 0;
+  line-height: 1.65;
+}
+.address-verify-match-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+.address-verify-compare {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.address-verify-box {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--divide);
+  background: var(--bg-sunk);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+.address-verify-box--suggested {
+  border-color: rgba(120, 160, 140, 0.35);
+  background: rgba(120, 180, 140, 0.08);
+}
+.address-verify-box-label {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.address-verify-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.address-verify-actions .btn-primary {
+  width: 100%;
+  justify-content: center;
+}
+.address-verify-actions .btn-ghost {
+  width: 100%;
+  justify-content: center;
+}
 
 /* Settings */
 .settings-page {

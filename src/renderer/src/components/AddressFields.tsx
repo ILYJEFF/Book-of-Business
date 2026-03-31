@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import type { GeocodeResult } from '../../../shared/types'
 import AddressPinMap from './AddressPinMap'
+
+function suggestionLine(r: GeocodeResult): string {
+  const f = r.formattedAddress?.trim()
+  if (f) return f
+  return r.displayName.trim()
+}
+
+/** Loose compare for "your line vs suggestion" messaging */
+function addressesLooselyMatch(a: string, b: string): boolean {
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  return norm(a) === norm(b)
+}
 
 interface Draft {
   address?: string
@@ -25,6 +42,11 @@ export default function AddressFields<T extends Draft>({
 }): React.ReactElement {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [verify, setVerify] = useState<{
+    userInput: string
+    result: GeocodeResult
+    suggestion: string
+  } | null>(null)
   const [latText, setLatText] = useState('')
   const [lonText, setLonText] = useState('')
   const latTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -63,13 +85,40 @@ export default function AddressFields<T extends Draft>({
         setErr('No results. Try a fuller address.')
         return
       }
-      setDraft((d) => (d ? { ...d, latitude: r.lat, longitude: r.lon } : d))
+      setVerify({ userInput: line, result: r, suggestion: suggestionLine(r) })
     } catch {
       setErr('Lookup failed. Try again in a moment.')
     } finally {
       setBusy(false)
     }
-  }, [draft.address, setDraft])
+  }, [draft.address])
+
+  const applyVerifyUseSuggestion = useCallback(() => {
+    if (!verify) return
+    const { result, suggestion } = verify
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            address: suggestion,
+            latitude: result.lat,
+            longitude: result.lon
+          }
+        : d
+    )
+    setVerify(null)
+  }, [verify, setDraft])
+
+  const applyVerifyKeepWording = useCallback(() => {
+    if (!verify) return
+    const { result } = verify
+    setDraft((d) => (d ? { ...d, latitude: result.lat, longitude: result.lon } : d))
+    setVerify(null)
+  }, [verify, setDraft])
+
+  const dismissVerify = useCallback(() => {
+    setVerify(null)
+  }, [])
 
   const clearPin = useCallback(() => {
     setErr(null)
@@ -134,7 +183,7 @@ export default function AddressFields<T extends Draft>({
       {editing && (
         <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           <button type="button" className="btn btn-ghost focus-ring" disabled={busy} onClick={() => void geocode()}>
-            {busy ? 'Looking up…' : 'Place on map'}
+            {busy ? 'Looking up…' : 'Verify & place on map'}
           </button>
           {hasPin && (
             <button type="button" className="btn btn-ghost focus-ring" disabled={busy} onClick={clearPin}>
@@ -199,8 +248,8 @@ export default function AddressFields<T extends Draft>({
       )}
       {editing && (
         <p className="muted small address-pin-hint">
-          Use Place on map from the address line, edit latitude and longitude if you want, or drag the pin on the preview map
-          below.
+          Verify &amp; place on map looks up your line (OpenStreetMap), shows a suggested address, and asks you to confirm
+          before setting coordinates. It is not postal-service certification. You can still edit lat/long or drag the pin.
         </p>
       )}
       {err && (
@@ -246,8 +295,52 @@ export default function AddressFields<T extends Draft>({
       )}
       {!editing && !hasPin && (draft.address ?? '').trim() && (
         <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-          No coordinates yet. Edit and use Place on map.
+          No coordinates yet. Edit and use Verify &amp; place on map.
         </p>
+      )}
+
+      {verify && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="addr-verify-title"
+          onClick={(e) => e.target === e.currentTarget && dismissVerify()}
+        >
+          <div className="modal-panel modal-panel--geocode">
+            <h3 id="addr-verify-title" className="address-verify-title">
+              Confirm this address
+            </h3>
+            <p className="muted small address-verify-lead">
+              We found a location on the map. Choose whether to keep your wording or use the suggested line. Suggestions
+              come from OpenStreetMap (community map data), not the post office.
+            </p>
+            {addressesLooselyMatch(verify.userInput, verify.suggestion) ? (
+              <p className="address-verify-match-note">Your text closely matches the suggestion.</p>
+            ) : null}
+            <div className="address-verify-compare">
+              <div className="address-verify-box">
+                <div className="address-verify-box-label">You entered</div>
+                <div>{verify.userInput}</div>
+              </div>
+              <div className="address-verify-box address-verify-box--suggested">
+                <div className="address-verify-box-label">Suggested</div>
+                <div>{verify.suggestion}</div>
+              </div>
+            </div>
+            <div className="address-verify-actions">
+              <button type="button" className="btn btn-primary focus-ring" onClick={applyVerifyUseSuggestion}>
+                Use suggested &amp; set pin
+              </button>
+              <button type="button" className="btn btn-ghost focus-ring" onClick={applyVerifyKeepWording}>
+                Keep my wording, set pin only
+              </button>
+              <button type="button" className="btn btn-ghost focus-ring" onClick={dismissVerify}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
