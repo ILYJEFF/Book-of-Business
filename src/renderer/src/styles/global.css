@@ -1266,37 +1266,66 @@ a:hover {
   border: 0;
 }
 
-.contact-photo-dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  margin: -10px -12px;
-  max-width: 280px;
-  border-radius: var(--radius-xl);
-  border: 1px solid transparent;
+.field-label--interactive {
+  cursor: pointer;
+  user-select: none;
+}
+.field-label--interactive:hover {
+  color: var(--text-primary);
+}
+
+.contact-photo-field {
+  border: 1px dashed var(--border-medium);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunk);
+  padding: 14px 16px;
+  min-height: 88px;
+  outline: none;
   transition:
-    border-color 0.15s var(--ease-out),
-    background 0.15s var(--ease-out),
-    box-shadow 0.15s var(--ease-out);
+    border-color 0.18s var(--ease-out),
+    background 0.18s var(--ease-out),
+    box-shadow 0.18s var(--ease-out);
 }
-.contact-photo-dropzone:focus-visible {
-  border-color: var(--border-medium);
+.contact-photo-field:focus-visible {
+  border-color: var(--accent-line);
+  border-style: solid;
   background: var(--accent-dim);
+  box-shadow: 0 0 0 1px rgba(212, 168, 92, 0.22);
 }
-.contact-photo-dropzone--drag {
+.contact-photo-field--drag {
+  border-style: solid;
   border-color: var(--accent-line);
   background: var(--accent-dim-strong);
-  box-shadow: 0 0 0 1px rgba(212, 168, 92, 0.35);
+  box-shadow: 0 0 0 1px rgba(212, 168, 92, 0.38);
 }
-.contact-photo-dropzone-hint {
-  margin: 0;
+.contact-photo-field-body {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.contact-photo-field-copy {
+  flex: 1;
+  min-width: 0;
+}
+.contact-photo-field-lead {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
   line-height: 1.5;
-  max-width: 220px;
+  letter-spacing: 0.01em;
 }
-.contact-photo-dropzone-error {
+.contact-photo-field-actions {
   margin: 0;
+  line-height: 1.55;
+}
+.contact-photo-field-sep {
+  color: var(--text-muted);
+}
+.contact-photo-field-error {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-hairline);
   color: var(--danger);
 }
 .btn-link {

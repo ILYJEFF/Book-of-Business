@@ -44,6 +44,7 @@ export default function ContactsView(): React.ReactElement {
   const [photoDndError, setPhotoDndError] = useState<string | null>(null)
   const [photoDragOver, setPhotoDragOver] = useState(false)
   const photoFileInputRef = useRef<HTMLInputElement>(null)
+  const photoFieldRef = useRef<HTMLDivElement>(null)
   const editingRef = useRef(editing)
   const draftRef = useRef(draft)
   editingRef.current = editing
@@ -212,76 +213,61 @@ export default function ContactsView(): React.ReactElement {
     if (c) openDetail(c)
   }, [openRecordRequest, contacts, clearOpenRecordRequest, openDetail])
 
-  /** Electron often omits image bytes from `clipboardData`; main `clipboard.readImage()` fixes that. */
-  useEffect(() => {
-    if (!editing) return
+  const onPhotoFieldPasteCapture = useCallback((e: ClipboardEvent): void => {
+    if (!editingRef.current || !draftRef.current) return
 
-    const onPaste = (e: ClipboardEvent): void => {
-      if (!editingRef.current || !draftRef.current) return
+    const cd = e.clipboardData
 
-      for (const n of e.composedPath()) {
-        if (!(n instanceof HTMLElement)) continue
-        const t = n.tagName
-        if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || t === 'OPTION') return
-        if (n.isContentEditable) return
-      }
+    const applyUrl = (url: string): void => {
+      setPhotoDndError(null)
+      setDraft((d) => (d ? { ...d, photoUrl: url } : d))
+    }
 
-      const cd = e.clipboardData
+    const fail = (err: unknown): void => {
+      setPhotoDndError(err instanceof Error ? err.message : 'Could not paste that image.')
+    }
 
-      const applyUrl = (url: string): void => {
-        setPhotoDndError(null)
-        setDraft((d) => (d ? { ...d, photoUrl: url } : d))
-      }
-
-      const fail = (err: unknown): void => {
-        setPhotoDndError(err instanceof Error ? err.message : 'Could not paste that image.')
-      }
-
-      if (cd) {
-        const plain = cd.getData('text/plain').trim()
-        if (
-          plain.startsWith('data:image/') &&
-          plain.includes(',') &&
-          plain.length <= 3_500_000
-        ) {
-          e.preventDefault()
-          void normalizeEmbeddedPhotoDataUrl(plain).then(applyUrl).catch(fail)
-          return
-        }
-
-        if (dataTransferHasExplicitImageMime(cd)) {
-          e.preventDefault()
-          void clipboardDataToPhotoDataUrl(cd)
-            .then((url) => {
-              if (url) applyUrl(url)
-            })
-            .catch(fail)
-          return
-        }
-      }
-
-      let native: string | null = null
-      try {
-        native = window.book.readClipboardImageDataUrlSync()
-      } catch {
-        native = null
-      }
-      if (native) {
+    if (cd) {
+      const plain = cd.getData('text/plain').trim()
+      if (
+        plain.startsWith('data:image/') &&
+        plain.includes(',') &&
+        plain.length <= 3_500_000
+      ) {
         e.preventDefault()
-        void normalizeEmbeddedPhotoDataUrl(native).then(applyUrl).catch(fail)
+        void normalizeEmbeddedPhotoDataUrl(plain).then(applyUrl).catch(fail)
         return
       }
 
-      if (cd) {
-        void clipboardDataToPhotoDataUrl(cd).then((url) => {
-          if (url) applyUrl(url)
-        })
+      if (dataTransferHasExplicitImageMime(cd)) {
+        e.preventDefault()
+        void clipboardDataToPhotoDataUrl(cd)
+          .then((url) => {
+            if (url) applyUrl(url)
+          })
+          .catch(fail)
+        return
       }
     }
 
-    window.addEventListener('paste', onPaste, true)
-    return () => window.removeEventListener('paste', onPaste, true)
-  }, [editing])
+    let native: string | null = null
+    try {
+      native = window.book.readClipboardImageDataUrlSync()
+    } catch {
+      native = null
+    }
+    if (native) {
+      e.preventDefault()
+      void normalizeEmbeddedPhotoDataUrl(native).then(applyUrl).catch(fail)
+      return
+    }
+
+    if (cd) {
+      void clipboardDataToPhotoDataUrl(cd).then((url) => {
+        if (url) applyUrl(url)
+      })
+    }
+  }, [])
 
   const displayDraft = editing && draft ? draft : selected
 
@@ -357,85 +343,7 @@ export default function ContactsView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                {editing ? (
-                  <div
-                    className={`contact-photo-dropzone focus-ring${photoDragOver ? ' contact-photo-dropzone--drag' : ''}`}
-                    tabIndex={0}
-                    role="button"
-                    aria-label="Contact photo: drop an image, paste (works anywhere in the form except text fields), or choose a file"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        photoFileInputRef.current?.click()
-                      }
-                    }}
-                    onDragEnter={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setPhotoDragOver(true)
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setPhotoDragOver(false)
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      e.dataTransfer.dropEffect = 'copy'
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setPhotoDragOver(false)
-                      const f = e.dataTransfer.files?.[0]
-                      if (f) void applyContactPhotoFile(f)
-                    }}
-                  >
-                    <ContactAvatar contact={displayDraft as Contact} size="lg" />
-                    <div className="contact-photo-dropzone-hint muted small">
-                      Drop a photo, paste while editing (⌘V outside text fields), or{' '}
-                      <button
-                        type="button"
-                        className="btn-link"
-                        onClick={() => photoFileInputRef.current?.click()}
-                      >
-                        choose file
-                      </button>
-                      .
-                      {(displayDraft as Contact).photoUrl?.trim() ? (
-                        <>
-                          {' '}
-                          <button
-                            type="button"
-                            className="btn-link"
-                            onClick={() => {
-                              setPhotoDndError(null)
-                              setDraft((d) => (d ? { ...d, photoUrl: '' } : d))
-                            }}
-                          >
-                            Remove photo
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                    <input
-                      ref={photoFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="visually-hidden"
-                      tabIndex={-1}
-                      onChange={onPhotoFileInputChange}
-                    />
-                    {photoDndError ? (
-                      <p className="contact-photo-dropzone-error small" role="alert">
-                        {photoDndError}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="lg" />
-                )}
+                <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="lg" />
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
                   <p className="detail-meta">
@@ -487,6 +395,103 @@ export default function ContactsView(): React.ReactElement {
             )}
 
             <div className="form-grid">
+              {editing && (
+                <div>
+                  <label
+                    className="field-label field-label--interactive"
+                    id="contact-photo-label"
+                    onClick={() => photoFieldRef.current?.focus()}
+                  >
+                    Profile photo
+                  </label>
+                  <div
+                    ref={photoFieldRef}
+                    id="contact-photo-field"
+                    className={`contact-photo-field focus-ring${photoDragOver ? ' contact-photo-field--drag' : ''}`}
+                    tabIndex={0}
+                    role="group"
+                    aria-labelledby="contact-photo-label"
+                    aria-describedby="contact-photo-field-desc"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        photoFileInputRef.current?.click()
+                      }
+                    }}
+                    onPasteCapture={(e) => onPhotoFieldPasteCapture(e.nativeEvent)}
+                    onDragEnter={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      setPhotoDragOver(true)
+                    }}
+                    onDragLeave={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      if (!ev.currentTarget.contains(ev.relatedTarget as Node)) setPhotoDragOver(false)
+                    }}
+                    onDragOver={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      ev.dataTransfer.dropEffect = 'copy'
+                    }}
+                    onDrop={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      setPhotoDragOver(false)
+                      const f = ev.dataTransfer.files?.[0]
+                      if (f) void applyContactPhotoFile(f)
+                    }}
+                  >
+                    <div className="contact-photo-field-body">
+                      <ContactAvatar contact={displayDraft as Contact} size="sm" />
+                      <div className="contact-photo-field-copy">
+                        <p className="contact-photo-field-lead" id="contact-photo-field-desc">
+                          Drop an image on this area, or click here and paste with ⌘V or Ctrl+V.
+                        </p>
+                        <p className="muted small contact-photo-field-actions">
+                          <button
+                            type="button"
+                            className="btn-link"
+                            onClick={() => photoFileInputRef.current?.click()}
+                          >
+                            Browse files
+                          </button>
+                          {(displayDraft as Contact).photoUrl?.trim() ? (
+                            <>
+                              <span aria-hidden className="contact-photo-field-sep">
+                                {' · '}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn-link"
+                                onClick={() => {
+                                  setPhotoDndError(null)
+                                  setDraft((d) => (d ? { ...d, photoUrl: '' } : d))
+                                }}
+                              >
+                                Remove photo
+                              </button>
+                            </>
+                          ) : null}
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      ref={photoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="visually-hidden"
+                      tabIndex={-1}
+                      onChange={onPhotoFileInputChange}
+                    />
+                    {photoDndError ? (
+                      <p className="contact-photo-field-error small" role="alert">
+                        {photoDndError}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
               <div>
                 <span className="field-label">Relationship</span>
                 <CategoryPills
