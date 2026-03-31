@@ -159,6 +159,16 @@ function optNum(v: unknown): number | undefined {
   return undefined
 }
 
+function optDepartment(v: unknown): string | undefined {
+  if (v === null || v === undefined) return undefined
+  if (typeof v === 'string') {
+    const t = v.trim()
+    return t || undefined
+  }
+  const t = String(v).trim()
+  return t || undefined
+}
+
 function optLatLon(
   lat: unknown,
   lon: unknown
@@ -251,7 +261,7 @@ export function saveContact(
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
     title: input.title?.trim() || undefined,
-    department: input.department?.trim() || undefined,
+    department: optDepartment((input as Record<string, unknown>)['department']),
     category: input.category,
     emails: Array.isArray(input.emails) ? input.emails.map((e) => e.trim()).filter(Boolean) : [],
     phones: Array.isArray(input.phones)
