@@ -21,6 +21,8 @@ export interface Company {
   website?: string
   industryId?: string
   notes?: string
+  /** Logo or image: `data:` URL from the app, or a remote `https:` URL. */
+  photoUrl?: string
   /** Street or mailing line; used with geocoding for the map */
   address?: string
   latitude?: number

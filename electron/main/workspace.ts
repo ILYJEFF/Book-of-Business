@@ -228,12 +228,23 @@ export function saveCompany(
         ) as Company)
       : null
   const coords = optLatLon(input.latitude, input.longitude)
+  let photoUrl: string | undefined
+  if (Object.hasOwn(input as object, 'photoUrl')) {
+    photoUrl =
+      typeof input.photoUrl === 'string' && input.photoUrl.trim()
+        ? input.photoUrl.trim()
+        : undefined
+  } else {
+    photoUrl = existing?.photoUrl
+  }
+
   const row: Company = {
     id,
     name: input.name.trim(),
     website: input.website?.trim() || undefined,
     industryId: input.industryId || undefined,
     notes: input.notes?.trim() || undefined,
+    photoUrl,
     address: input.address?.trim() || undefined,
     ...coords,
     createdAt: existing?.createdAt ?? now(),

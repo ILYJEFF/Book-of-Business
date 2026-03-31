@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company } from '../../../shared/types'
 import AddressFields from '../components/AddressFields'
+import CompanyAvatar from '../components/CompanyAvatar'
 import CompanyFilterPanel from '../components/CompanyFilterPanel'
 import IndustrySearchPick from '../components/IndustrySearchPick'
 import { useApp } from '../context/AppContext'
+import { useWorkspacePhotoUrl } from '../hooks/useWorkspacePhotoUrl'
 import { industryPathLabel } from '../lib/format'
 import { companyPassesFilters, createDefaultCompanyFilters } from '../lib/recordFilters'
 
@@ -16,6 +18,19 @@ export default function CompaniesView(): React.ReactElement {
   const [draft, setDraft] = useState<Partial<Company> | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const {
+    photoDndError,
+    photoDragOver,
+    setPhotoDragOver,
+    photoFileInputRef,
+    photoFieldRef,
+    resetPhotoFieldUi,
+    applyPhotoFile,
+    onPhotoFileInputChange,
+    onPhotoFieldPasteCapture,
+    setPhotoDndError
+  } = useWorkspacePhotoUrl<Company>(editing, draft, setDraft)
 
   const industryMap = useMemo(
     () => new Map(industries.map((i) => [i.id, i] as const)),
@@ -36,17 +51,19 @@ export default function CompaniesView(): React.ReactElement {
     setSelectedId(c.id)
     setCreating(false)
     setEditing(false)
+    resetPhotoFieldUi()
     setDraft({ ...c })
     setConfirmDelete(false)
-  }, [])
+  }, [resetPhotoFieldUi])
 
   const startCreate = useCallback(() => {
     setSelectedId(null)
     setCreating(true)
     setEditing(true)
+    resetPhotoFieldUi()
     setDraft({ name: '', website: '', industryId: '', notes: '', address: '' })
     setConfirmDelete(false)
-  }, [])
+  }, [resetPhotoFieldUi])
 
   const startCreateAtSharedPin = useCallback(
     (p: { latitude: number; longitude: number; address?: string }) => {
@@ -54,6 +71,7 @@ export default function CompaniesView(): React.ReactElement {
       setCreating(true)
       setEditing(true)
       setConfirmDelete(false)
+      resetPhotoFieldUi()
       setDraft({
         name: '',
         website: '',
@@ -64,18 +82,20 @@ export default function CompaniesView(): React.ReactElement {
         longitude: p.longitude
       })
     },
-    []
+    [resetPhotoFieldUi]
   )
 
   const startEdit = useCallback((c: Company) => {
     setCreating(false)
     setSelectedId(c.id)
     setEditing(true)
+    resetPhotoFieldUi()
     setDraft({ ...c })
     setConfirmDelete(false)
-  }, [])
+  }, [resetPhotoFieldUi])
 
   const cancelEdit = useCallback(() => {
+    resetPhotoFieldUi()
     if (creating) {
       setCreating(false)
       setDraft(null)
@@ -86,7 +106,7 @@ export default function CompaniesView(): React.ReactElement {
       setDraft({ ...selected })
       setEditing(false)
     }
-  }, [creating, selected])
+  }, [creating, selected, resetPhotoFieldUi])
 
   const save = useCallback(async () => {
     if (!draft?.name?.trim()) return
@@ -97,7 +117,8 @@ export default function CompaniesView(): React.ReactElement {
         name: draft.name.trim(),
         website: draft.website?.trim() || undefined,
         industryId: draft.industryId || undefined,
-        notes: draft.notes?.trim() || undefined
+        notes: draft.notes?.trim() || undefined,
+        address: draft.address?.trim() || undefined
       })
       await refresh({ background: true })
       setSelectedId(saved.id)
@@ -133,8 +154,6 @@ export default function CompaniesView(): React.ReactElement {
     if (c) open(c)
   }, [openRecordRequest, companies, clearOpenRecordRequest, open])
 
-  const coInitial = (name: string) => (name.trim()[0] ?? '?').toUpperCase()
-
   return (
     <div className="split-view">
       <div className="list-column">
@@ -159,7 +178,7 @@ export default function CompaniesView(): React.ReactElement {
                 onClick={() => open(c)}
                 className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
               >
-                <div className="avatar avatar--sm">{coInitial(c.name)}</div>
+                <CompanyAvatar company={c} size="sm" />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="list-row-title">{c.name}</div>
                   <div className="list-row-sub">
@@ -202,7 +221,7 @@ export default function CompaniesView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                <div className="avatar avatar--lg">{coInitial(display.name ?? '')}</div>
+                <CompanyAvatar company={display as Company} size="xl" />
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{display.name || 'Untitled company'}</h2>
                   <p className="detail-meta">{creating ? 'New entry' : 'Company JSON in your library'}</p>
@@ -249,6 +268,110 @@ export default function CompaniesView(): React.ReactElement {
             )}
 
             <div className="form-grid" style={{ marginTop: confirmDelete ? 22 : 0 }}>
+              {editing && (
+                <div>
+                  <label
+                    className="field-label field-label--interactive"
+                    id="company-photo-label"
+                    onClick={() => photoFieldRef.current?.focus()}
+                  >
+                    Logo or photo
+                  </label>
+                  <div
+                    ref={photoFieldRef}
+                    id="company-photo-field"
+                    className={`contact-photo-field focus-ring${photoDragOver ? ' contact-photo-field--drag' : ''}`}
+                    tabIndex={0}
+                    role="group"
+                    aria-labelledby="company-photo-label"
+                    aria-describedby="company-photo-field-desc"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        photoFileInputRef.current?.click()
+                      }
+                    }}
+                    onPasteCapture={(e) => onPhotoFieldPasteCapture(e.nativeEvent)}
+                    onDragEnter={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      setPhotoDragOver(true)
+                    }}
+                    onDragLeave={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      if (!ev.currentTarget.contains(ev.relatedTarget as Node)) setPhotoDragOver(false)
+                    }}
+                    onDragOver={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      ev.dataTransfer.dropEffect = 'copy'
+                    }}
+                    onDrop={(ev) => {
+                      ev.preventDefault()
+                      ev.stopPropagation()
+                      setPhotoDragOver(false)
+                      const f = ev.dataTransfer.files?.[0]
+                      if (f) void applyPhotoFile(f)
+                    }}
+                  >
+                    <div className="contact-photo-field-body">
+                      <CompanyAvatar
+                        company={{
+                          id: (display as Company).id ?? 'new',
+                          name: (display as Company).name ?? '',
+                          photoUrl: (display as Company).photoUrl
+                        }}
+                        size="sm"
+                      />
+                      <div className="contact-photo-field-copy">
+                        <p className="contact-photo-field-lead" id="company-photo-field-desc">
+                          Drop a logo or image here, or click and paste with ⌘V or Ctrl+V.
+                        </p>
+                        <p className="muted small contact-photo-field-actions">
+                          <button
+                            type="button"
+                            className="btn-link"
+                            onClick={() => photoFileInputRef.current?.click()}
+                          >
+                            Browse files
+                          </button>
+                          {(display as Company).photoUrl?.trim() ? (
+                            <>
+                              <span aria-hidden className="contact-photo-field-sep">
+                                {' · '}
+                              </span>
+                              <button
+                                type="button"
+                                className="btn-link"
+                                onClick={() => {
+                                  setPhotoDndError(null)
+                                  setDraft((d) => (d ? { ...d, photoUrl: '' } : d))
+                                }}
+                              >
+                                Remove image
+                              </button>
+                            </>
+                          ) : null}
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      ref={photoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="visually-hidden"
+                      tabIndex={-1}
+                      onChange={onPhotoFileInputChange}
+                    />
+                    {photoDndError ? (
+                      <p className="contact-photo-field-error small" role="alert">
+                        {photoDndError}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="field-label" htmlFor="co-name">
                   Company name

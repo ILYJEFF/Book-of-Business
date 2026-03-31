@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
@@ -8,12 +8,7 @@ import ContactFilterPanel from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
 import LinkedInGlyph from '../components/LinkedInGlyph'
-import {
-  clipboardDataToPhotoDataUrl,
-  dataTransferHasExplicitImageMime,
-  imageFileToPhotoDataUrl,
-  normalizeEmbeddedPhotoDataUrl
-} from '../lib/contactPhoto'
+import { useWorkspacePhotoUrl } from '../hooks/useWorkspacePhotoUrl'
 import { contactDisplayName, companyById, contactLinkedInOpenUrl, industryPathLabel } from '../lib/format'
 import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
@@ -42,15 +37,20 @@ export default function ContactsView(): React.ReactElement {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Partial<Contact> | null>(null)
   const [saving, setSaving] = useState(false)
-  const [photoDndError, setPhotoDndError] = useState<string | null>(null)
-  const [photoDragOver, setPhotoDragOver] = useState(false)
-  const photoFileInputRef = useRef<HTMLInputElement>(null)
-  const photoFieldRef = useRef<HTMLDivElement>(null)
-  const editingRef = useRef(editing)
-  const draftRef = useRef(draft)
-  editingRef.current = editing
-  draftRef.current = draft
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const {
+    photoDndError,
+    photoDragOver,
+    setPhotoDragOver,
+    photoFileInputRef,
+    photoFieldRef,
+    resetPhotoFieldUi,
+    applyPhotoFile,
+    onPhotoFileInputChange,
+    onPhotoFieldPasteCapture,
+    setPhotoDndError
+  } = useWorkspacePhotoUrl<Contact>(editing, draft, setDraft)
 
   const companyMap = useMemo(
     () => new Map(companies.map((c) => [c.id, c] as const)),
@@ -76,10 +76,9 @@ export default function ContactsView(): React.ReactElement {
     setCreating(true)
     setEditing(true)
     setConfirmDelete(false)
-    setPhotoDndError(null)
-    setPhotoDragOver(false)
+    resetPhotoFieldUi()
     setDraft({ ...emptyContact(), id: undefined })
-  }, [])
+  }, [resetPhotoFieldUi])
 
   const startCreateAtSharedPin = useCallback(
     (p: { latitude: number; longitude: number; address?: string }) => {
@@ -87,8 +86,7 @@ export default function ContactsView(): React.ReactElement {
       setCreating(true)
       setEditing(true)
       setConfirmDelete(false)
-      setPhotoDndError(null)
-      setPhotoDragOver(false)
+      resetPhotoFieldUi()
       setDraft({
         ...emptyContact(),
         id: undefined,
@@ -97,7 +95,7 @@ export default function ContactsView(): React.ReactElement {
         address: (p.address ?? '').trim() || ''
       })
     },
-    []
+    [resetPhotoFieldUi]
   )
 
   const startEdit = useCallback((c: Contact) => {
@@ -105,14 +103,12 @@ export default function ContactsView(): React.ReactElement {
     setSelectedId(c.id)
     setEditing(true)
     setConfirmDelete(false)
-    setPhotoDndError(null)
-    setPhotoDragOver(false)
+    resetPhotoFieldUi()
     setDraft({ ...c })
-  }, [])
+  }, [resetPhotoFieldUi])
 
   const cancelEdit = useCallback(() => {
-    setPhotoDndError(null)
-    setPhotoDragOver(false)
+    resetPhotoFieldUi()
     if (creating) {
       setCreating(false)
       setDraft(null)
@@ -123,7 +119,7 @@ export default function ContactsView(): React.ReactElement {
       setDraft({ ...selected })
       setEditing(false)
     }
-  }, [creating, selected])
+  }, [creating, selected, resetPhotoFieldUi])
 
   const save = useCallback(async () => {
     if (!draft) return
@@ -161,25 +157,6 @@ export default function ContactsView(): React.ReactElement {
     }
   }, [draft, refresh])
 
-  const applyContactPhotoFile = useCallback(async (file: File) => {
-    setPhotoDndError(null)
-    try {
-      const url = await imageFileToPhotoDataUrl(file)
-      setDraft((d) => (d ? { ...d, photoUrl: url } : d))
-    } catch (err) {
-      setPhotoDndError(err instanceof Error ? err.message : 'Could not use that image.')
-    }
-  }, [])
-
-  const onPhotoFileInputChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0]
-      e.target.value = ''
-      if (f) void applyContactPhotoFile(f)
-    },
-    [applyContactPhotoFile]
-  )
-
   const remove = useCallback(async () => {
     if (!selected) return
     await window.book.deleteContact(selected.id)
@@ -195,12 +172,11 @@ export default function ContactsView(): React.ReactElement {
       setSelectedId(c.id)
       setCreating(false)
       setEditing(false)
-      setPhotoDndError(null)
-      setPhotoDragOver(false)
+      resetPhotoFieldUi()
       setDraft({ ...c })
       setConfirmDelete(false)
     },
-    []
+    [resetPhotoFieldUi]
   )
 
   useEffect(() => {
@@ -213,62 +189,6 @@ export default function ContactsView(): React.ReactElement {
     clearOpenRecordRequest()
     if (c) openDetail(c)
   }, [openRecordRequest, contacts, clearOpenRecordRequest, openDetail])
-
-  const onPhotoFieldPasteCapture = useCallback((e: ClipboardEvent): void => {
-    if (!editingRef.current || !draftRef.current) return
-
-    const cd = e.clipboardData
-
-    const applyUrl = (url: string): void => {
-      setPhotoDndError(null)
-      setDraft((d) => (d ? { ...d, photoUrl: url } : d))
-    }
-
-    const fail = (err: unknown): void => {
-      setPhotoDndError(err instanceof Error ? err.message : 'Could not paste that image.')
-    }
-
-    if (cd) {
-      const plain = cd.getData('text/plain').trim()
-      if (
-        plain.startsWith('data:image/') &&
-        plain.includes(',') &&
-        plain.length <= 3_500_000
-      ) {
-        e.preventDefault()
-        void normalizeEmbeddedPhotoDataUrl(plain).then(applyUrl).catch(fail)
-        return
-      }
-
-      if (dataTransferHasExplicitImageMime(cd)) {
-        e.preventDefault()
-        void clipboardDataToPhotoDataUrl(cd)
-          .then((url) => {
-            if (url) applyUrl(url)
-          })
-          .catch(fail)
-        return
-      }
-    }
-
-    let native: string | null = null
-    try {
-      native = window.book.readClipboardImageDataUrlSync()
-    } catch {
-      native = null
-    }
-    if (native) {
-      e.preventDefault()
-      void normalizeEmbeddedPhotoDataUrl(native).then(applyUrl).catch(fail)
-      return
-    }
-
-    if (cd) {
-      void clipboardDataToPhotoDataUrl(cd).then((url) => {
-        if (url) applyUrl(url)
-      })
-    }
-  }, [])
 
   const displayDraft = editing && draft ? draft : selected
 
@@ -497,7 +417,7 @@ export default function ContactsView(): React.ReactElement {
                       ev.stopPropagation()
                       setPhotoDragOver(false)
                       const f = ev.dataTransfer.files?.[0]
-                      if (f) void applyContactPhotoFile(f)
+                      if (f) void applyPhotoFile(f)
                     }}
                   >
                     <div className="contact-photo-field-body">

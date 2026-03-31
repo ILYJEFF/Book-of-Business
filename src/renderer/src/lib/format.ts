@@ -1,5 +1,19 @@
 import type { Company, Contact, Industry } from '../../../shared/types'
 
+/** One or two letters for company list and avatars (e.g. "Acme Corp" → AC). */
+export function companyInitials(name: string): string {
+  const t = name.trim()
+  if (!t) return '?'
+  const parts = t.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    const a = parts[0][0] ?? ''
+    const b = parts[1][0] ?? ''
+    const s = (a + b).toUpperCase()
+    return s || '?'
+  }
+  return (t[0] ?? '?').toUpperCase()
+}
+
 export function contactDisplayName(c: Contact): string {
   const t = `${c.firstName} ${c.lastName}`.trim()
   return t || 'Unnamed contact'
