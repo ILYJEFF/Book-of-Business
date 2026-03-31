@@ -5,6 +5,12 @@ export interface PhoneEntry {
   value: string
 }
 
+/** Email with a role (work, personal, etc.), same pattern as {@link PhoneEntry}. */
+export interface EmailEntry {
+  label: string
+  value: string
+}
+
 export interface Industry {
   id: string
   name: string
@@ -40,7 +46,7 @@ export interface Contact {
   /** Workplace department; one of the standard labels from the app list, or a custom string if edited elsewhere. */
   department?: string
   category: ContactCategory
-  emails: string[]
+  emails: EmailEntry[]
   phones: PhoneEntry[]
   linkedinUrl?: string
   /** Profile image: `data:` URL from the app, or a remote `https:` URL if you pasted a link. */

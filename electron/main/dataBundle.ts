@@ -5,6 +5,7 @@ import type {
   BookExportBundle,
   Company,
   Contact,
+  EmailEntry,
   Industry,
   PhoneEntry,
   SaveUrlChannels
@@ -185,8 +186,20 @@ function normalizeContactRow(
   const r = x as Record<string, unknown>
   const firstName = (strOpt(r.firstName) ?? '').trim() || 'Unknown'
   const lastName = (strOpt(r.lastName) ?? '').trim()
-  const emails = Array.isArray(r.emails)
-    ? r.emails.map((e) => String(e).trim()).filter(Boolean)
+  const emails: EmailEntry[] = Array.isArray(r.emails)
+    ? (r.emails
+        .map((e) => {
+          if (typeof e === 'string') {
+            const v = e.trim()
+            return v ? { label: 'Other', value: v } : null
+          }
+          if (!e || typeof e !== 'object') return null
+          const o = e as Record<string, unknown>
+          const value = String(o.value ?? '').trim()
+          if (!value) return null
+          return { label: String(o.label || 'Other').trim() || 'Other', value }
+        })
+        .filter(Boolean) as EmailEntry[])
     : []
   const phones: PhoneEntry[] = Array.isArray(r.phones)
     ? (r.phones
@@ -195,7 +208,7 @@ function normalizeContactRow(
           const po = p as Record<string, unknown>
           const value = String(po.value ?? '').trim()
           if (!value) return null
-          return { label: (String(po.label || 'Phone').trim() || 'Phone') as string, value }
+          return { label: String(po.label || 'Other').trim() || 'Other', value }
         })
         .filter(Boolean) as PhoneEntry[])
     : []

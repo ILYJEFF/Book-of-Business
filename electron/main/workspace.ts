@@ -4,7 +4,9 @@ import { v4 as uuidv4 } from 'uuid'
 import type {
   Company,
   Contact,
+  EmailEntry,
   Industry,
+  PhoneEntry,
   SaveUrlChannels,
   WorkspaceManifest
 } from '../../src/shared/types'
@@ -138,12 +140,53 @@ export function listCompanies(root: string): Company[] {
   )
 }
 
+function normalizeEmailsFromDisk(raw: unknown): EmailEntry[] {
+  if (!Array.isArray(raw)) return []
+  const out: EmailEntry[] = []
+  for (const e of raw) {
+    if (typeof e === 'string') {
+      const v = e.trim()
+      if (v) out.push({ label: 'Other', value: v })
+    } else if (e && typeof e === 'object') {
+      const o = e as Record<string, unknown>
+      const value = String(o.value ?? '').trim()
+      if (!value) continue
+      const label = String(o.label ?? 'Other').trim() || 'Other'
+      out.push({ label, value })
+    }
+  }
+  return out
+}
+
+function normalizePhonesFromDisk(raw: unknown): PhoneEntry[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((p) => p && typeof p === 'object' && String((p as PhoneEntry).value ?? '').trim())
+    .map((p) => {
+      const o = p as PhoneEntry
+      return {
+        label: String(o.label ?? '').trim() || 'Other',
+        value: String(o.value).trim()
+      }
+    })
+}
+
+function coerceContactFromDisk(c: Contact): Contact {
+  return {
+    ...c,
+    emails: normalizeEmailsFromDisk(c.emails as unknown),
+    phones: normalizePhonesFromDisk(c.phones as unknown)
+  }
+}
+
 export function listContacts(root: string): Contact[] {
-  return readJsonDir<Contact>(join(root, 'contacts')).sort((a, b) => {
-    const an = `${a.lastName} ${a.firstName}`
-    const bn = `${b.lastName} ${b.firstName}`
-    return an.localeCompare(bn)
-  })
+  return readJsonDir<Contact>(join(root, 'contacts'))
+    .map(coerceContactFromDisk)
+    .sort((a, b) => {
+      const an = `${a.lastName} ${a.firstName}`
+      const bn = `${b.lastName} ${b.firstName}`
+      return an.localeCompare(bn)
+    })
 }
 
 function now(): string {
@@ -336,11 +379,17 @@ export function saveContact(
     title: input.title?.trim() || undefined,
     department: optDepartment(deptRaw),
     category: input.category,
-    emails: Array.isArray(input.emails) ? input.emails.map((e) => e.trim()).filter(Boolean) : [],
+    emails: normalizeEmailsFromDisk(input.emails),
     phones: Array.isArray(input.phones)
       ? input.phones
-          .filter((p) => p && String(p.value).trim())
-          .map((p) => ({ label: (p.label || 'Phone').trim(), value: String(p.value).trim() }))
+          .filter((p) => p && String((p as PhoneEntry).value).trim())
+          .map((p) => {
+            const o = p as PhoneEntry
+            return {
+              label: String(o.label ?? '').trim() || 'Other',
+              value: String(o.value).trim()
+            }
+          })
       : [],
     linkedinUrl,
     photoUrl,

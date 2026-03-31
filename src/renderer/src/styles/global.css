@@ -2060,11 +2060,52 @@ a:hover {
   gap: 8px;
   align-items: center;
 }
+.channel-combo-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.channel-label-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.channel-label-select {
+  width: auto;
+  min-width: 7.25rem;
+  max-width: 10rem;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.channel-custom-label {
+  width: 6.25rem;
+  min-width: 4.75rem;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.channel-label-readonly {
+  flex-shrink: 0;
+  min-width: 4.75rem;
+  max-width: 8rem;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .input-narrow {
   max-width: 120px;
 }
 .flex-1 {
   flex: 1;
+}
+.min-w-0 {
+  min-width: 0;
 }
 
 .address-pin-row {

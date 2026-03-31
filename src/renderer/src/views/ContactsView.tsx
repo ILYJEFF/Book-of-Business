@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company, Contact, Industry } from '../../../shared/types'
+import LabeledContactChannelRow from '../components/LabeledContactChannelRow'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
@@ -19,7 +20,7 @@ function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
     title: '',
     category: 'work',
     emails: [],
-    phones: [{ label: 'Cell', value: '' }],
+    phones: [{ label: 'Mobile', value: '' }],
     linkedinUrl: '',
     website: '',
     companyIds: [],
@@ -128,7 +129,12 @@ export default function ContactsView(): React.ReactElement {
     if (!first && !last) return
     setSaving(true)
     try {
-      const emails = (draft.emails ?? []).map((e) => e.trim()).filter(Boolean)
+      const emails = (draft.emails ?? [])
+        .map((e) => ({
+          label: (e.label ?? 'Other').trim() || 'Other',
+          value: (e.value ?? '').trim()
+        }))
+        .filter((e) => e.value)
       const deptRaw = draft.department
       const departmentField: string | null =
         deptRaw != null && String(deptRaw).trim() ? String(deptRaw).trim() : null
@@ -713,7 +719,7 @@ function EmailsBlock({
   editing: boolean
   setDraft: React.Dispatch<React.SetStateAction<Partial<Contact> | null>>
 }): React.ReactElement {
-  const filled = (draft.emails ?? []).filter((e) => e.trim())
+  const filled = (draft.emails ?? []).filter((e) => e.value?.trim())
   if (!editing && filled.length === 0) {
     return (
       <div>
@@ -722,26 +728,38 @@ function EmailsBlock({
       </div>
     )
   }
-  const list = editing ? (draft.emails?.length ? draft.emails : ['']) : filled
+  const defaultRow = { label: 'Work', value: '' }
+  const list = editing ? (draft.emails?.length ? draft.emails : [defaultRow]) : filled
   return (
     <div>
       <span className="field-label">Email addresses</span>
       <div className="stack-8">
         {list.map((em, idx) => (
           <div key={idx} className="stack-8-row">
-            <input
-              className="text-input focus-ring flex-1"
+            <LabeledContactChannelRow
+              kind="email"
               disabled={!editing}
-              placeholder="name@company.com"
-              value={em}
-              onChange={(e) => {
+              label={em.label || 'Other'}
+              value={em.value}
+              valuePlaceholder="name@company.com"
+              onLabelChange={(next) => {
                 if (!editing) return
                 setDraft((d) => {
                   if (!d) return d
-                  const next = [...(d.emails ?? [])]
-                  while (next.length <= idx) next.push('')
-                  next[idx] = e.target.value
-                  return { ...d, emails: next }
+                  const nextList = [...(d.emails ?? [])]
+                  while (nextList.length <= idx) nextList.push({ ...defaultRow })
+                  nextList[idx] = { ...nextList[idx], label: next }
+                  return { ...d, emails: nextList }
+                })
+              }}
+              onValueChange={(next) => {
+                if (!editing) return
+                setDraft((d) => {
+                  if (!d) return d
+                  const nextList = [...(d.emails ?? [])]
+                  while (nextList.length <= idx) nextList.push({ ...defaultRow })
+                  nextList[idx] = { ...nextList[idx], value: next }
+                  return { ...d, emails: nextList }
                 })
               }}
             />
@@ -754,7 +772,7 @@ function EmailsBlock({
                     if (!d) return d
                     const next = [...(d.emails ?? [])]
                     next.splice(idx, 1)
-                    return { ...d, emails: next.length ? next : [''] }
+                    return { ...d, emails: next.length ? next : [defaultRow] }
                   })
                 }
               >
@@ -767,7 +785,11 @@ function EmailsBlock({
           <button
             type="button"
             className="btn btn-ghost focus-ring align-start"
-            onClick={() => setDraft((d) => (d ? { ...d, emails: [...(d.emails ?? []), ''] } : d))}
+            onClick={() =>
+              setDraft((d) =>
+                d ? { ...d, emails: [...(d.emails ?? []), { label: 'Work', value: '' }] } : d
+              )
+            }
           >
             Add email
           </button>
@@ -795,40 +817,38 @@ function PhonesBlock({
       </div>
     )
   }
-  const list = editing ? (draft.phones?.length ? draft.phones : [{ label: 'Cell', value: '' }]) : filled
+  const defaultRow = { label: 'Mobile', value: '' }
+  const list = editing ? (draft.phones?.length ? draft.phones : [defaultRow]) : filled
   return (
     <div>
       <span className="field-label">Phone numbers</span>
       <div className="stack-8">
         {list.map((p, idx) => (
           <div key={idx} className="stack-8-row">
-            <input
-              className="text-input focus-ring input-narrow"
+            <LabeledContactChannelRow
+              kind="phone"
               disabled={!editing}
-              placeholder="Label"
-              value={p.label}
-              onChange={(e) => {
+              label={p.label || 'Other'}
+              value={p.value}
+              valuePlaceholder="+1 …"
+              onLabelChange={(next) => {
                 if (!editing) return
                 setDraft((d) => {
                   if (!d) return d
-                  const next = [...(d.phones ?? [])]
-                  next[idx] = { ...next[idx], label: e.target.value }
-                  return { ...d, phones: next }
+                  const nextList = [...(d.phones ?? [])]
+                  while (nextList.length <= idx) nextList.push({ ...defaultRow })
+                  nextList[idx] = { ...nextList[idx], label: next }
+                  return { ...d, phones: nextList }
                 })
               }}
-            />
-            <input
-              className="text-input focus-ring flex-1"
-              disabled={!editing}
-              placeholder="+1 …"
-              value={p.value}
-              onChange={(e) => {
+              onValueChange={(next) => {
                 if (!editing) return
                 setDraft((d) => {
                   if (!d) return d
-                  const next = [...(d.phones ?? [])]
-                  next[idx] = { ...next[idx], value: e.target.value }
-                  return { ...d, phones: next }
+                  const nextList = [...(d.phones ?? [])]
+                  while (nextList.length <= idx) nextList.push({ ...defaultRow })
+                  nextList[idx] = { ...nextList[idx], value: next }
+                  return { ...d, phones: nextList }
                 })
               }}
             />
@@ -841,7 +861,7 @@ function PhonesBlock({
                     if (!d) return d
                     const next = [...(d.phones ?? [])]
                     next.splice(idx, 1)
-                    return { ...d, phones: next.length ? next : [{ label: 'Cell', value: '' }] }
+                    return { ...d, phones: next.length ? next : [defaultRow] }
                   })
                 }
               >
@@ -856,7 +876,7 @@ function PhonesBlock({
             className="btn btn-ghost focus-ring align-start"
             onClick={() =>
               setDraft((d) =>
-                d ? { ...d, phones: [...(d.phones ?? []), { label: 'Work', value: '' }] } : d
+                d ? { ...d, phones: [...(d.phones ?? []), { label: 'Mobile', value: '' }] } : d
               )
             }
           >
