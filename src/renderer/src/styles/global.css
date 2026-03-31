@@ -1378,6 +1378,53 @@ a:hover {
   gap: 16px;
 }
 
+.company-linked-contacts {
+  padding-top: 4px;
+}
+.company-linked-contacts-empty {
+  margin: 10px 0 0;
+  line-height: 1.55;
+  max-width: 42ch;
+}
+.company-linked-contacts-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.company-linked-contact-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--divide);
+  background: var(--bg-sunk);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease-out),
+    background 0.15s var(--ease-out);
+}
+.company-linked-contact-hit:hover {
+  border-color: var(--border-medium);
+  background: rgba(255, 250, 240, 0.04);
+}
+.company-linked-contact-name {
+  font-size: 14px;
+  font-weight: 550;
+  letter-spacing: 0.01em;
+}
+.company-linked-contact-title {
+  line-height: 1.4;
+}
+
 /* Avatars */
 .avatar {
   display: flex;

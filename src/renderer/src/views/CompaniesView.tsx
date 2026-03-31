@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Company } from '../../../shared/types'
+import type { Company, Contact } from '../../../shared/types'
 import AddressFields from '../components/AddressFields'
 import CompanyAvatar from '../components/CompanyAvatar'
 import CompanyFilterPanel from '../components/CompanyFilterPanel'
@@ -8,11 +8,12 @@ import LinkedInGlyph from '../components/LinkedInGlyph'
 import WebsiteGlyph from '../components/WebsiteGlyph'
 import { useApp } from '../context/AppContext'
 import { useWorkspacePhotoUrl } from '../hooks/useWorkspacePhotoUrl'
-import { companyLinkedInOpenUrl, industryPathLabel, safeWebsiteOpenUrl } from '../lib/format'
+import { companyLinkedInOpenUrl, contactDisplayName, industryPathLabel, safeWebsiteOpenUrl } from '../lib/format'
 import { companyPassesFilters, createDefaultCompanyFilters } from '../lib/recordFilters'
 
 export default function CompaniesView(): React.ReactElement {
-  const { companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
+  const { companies, industries, contacts, refresh, openRecordRequest, clearOpenRecordRequest, requestOpenRecord } =
+    useApp()
   const [filters, setFilters] = useState(createDefaultCompanyFilters)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -48,6 +49,17 @@ export default function CompaniesView(): React.ReactElement {
     () => companies.filter((c) => companyPassesFilters(c, filters, industryMap)),
     [companies, filters, industryMap]
   )
+
+  const linkedContacts = useMemo((): Contact[] => {
+    if (!selectedId || creating) return []
+    return contacts
+      .filter((c) => (c.companyIds ?? []).includes(selectedId))
+      .sort((a, b) => {
+        const an = `${a.lastName} ${a.firstName}`.toLowerCase()
+        const bn = `${b.lastName} ${b.firstName}`.toLowerCase()
+        return an.localeCompare(bn)
+      })
+  }, [contacts, selectedId, creating])
 
   const open = useCallback((c: Company) => {
     setSelectedId(c.id)
@@ -577,6 +589,34 @@ export default function CompaniesView(): React.ReactElement {
                   onChange={(e) => editing && setDraft((d) => (d ? { ...d, notes: e.target.value } : d))}
                 />
               </div>
+
+              {!creating && selectedId ? (
+                <div className="company-linked-contacts">
+                  <span className="field-label">People linked here</span>
+                  {linkedContacts.length === 0 ? (
+                    <p className="muted small company-linked-contacts-empty">
+                      No contacts list this company yet. Open a person and add this company under Companies.
+                    </p>
+                  ) : (
+                    <ul className="company-linked-contacts-list">
+                      {linkedContacts.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            className="company-linked-contact-hit focus-ring"
+                            onClick={() => requestOpenRecord('contact', c.id)}
+                          >
+                            <span className="company-linked-contact-name">{contactDisplayName(c)}</span>
+                            {c.title?.trim() ? (
+                              <span className="company-linked-contact-title muted small">{c.title.trim()}</span>
+                            ) : null}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             {editing && (
