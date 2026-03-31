@@ -7,7 +7,12 @@ import ContactAvatar from '../components/ContactAvatar'
 import ContactFilterPanel from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
-import { clipboardDataToPhotoDataUrl, imageFileToPhotoDataUrl } from '../lib/contactPhoto'
+import {
+  clipboardDataToPhotoDataUrl,
+  dataTransferHasExplicitImageMime,
+  imageFileToPhotoDataUrl,
+  normalizeEmbeddedPhotoDataUrl
+} from '../lib/contactPhoto'
 import { contactDisplayName, companyById, industryPathLabel } from '../lib/format'
 import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
@@ -39,6 +44,10 @@ export default function ContactsView(): React.ReactElement {
   const [photoDndError, setPhotoDndError] = useState<string | null>(null)
   const [photoDragOver, setPhotoDragOver] = useState(false)
   const photoFileInputRef = useRef<HTMLInputElement>(null)
+  const editingRef = useRef(editing)
+  const draftRef = useRef(draft)
+  editingRef.current = editing
+  draftRef.current = draft
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const companyMap = useMemo(
@@ -76,6 +85,8 @@ export default function ContactsView(): React.ReactElement {
       setCreating(true)
       setEditing(true)
       setConfirmDelete(false)
+      setPhotoDndError(null)
+      setPhotoDragOver(false)
       setDraft({
         ...emptyContact(),
         id: undefined,
@@ -201,6 +212,77 @@ export default function ContactsView(): React.ReactElement {
     if (c) openDetail(c)
   }, [openRecordRequest, contacts, clearOpenRecordRequest, openDetail])
 
+  /** Electron often omits image bytes from `clipboardData`; main `clipboard.readImage()` fixes that. */
+  useEffect(() => {
+    if (!editing) return
+
+    const onPaste = (e: ClipboardEvent): void => {
+      if (!editingRef.current || !draftRef.current) return
+
+      for (const n of e.composedPath()) {
+        if (!(n instanceof HTMLElement)) continue
+        const t = n.tagName
+        if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || t === 'OPTION') return
+        if (n.isContentEditable) return
+      }
+
+      const cd = e.clipboardData
+
+      const applyUrl = (url: string): void => {
+        setPhotoDndError(null)
+        setDraft((d) => (d ? { ...d, photoUrl: url } : d))
+      }
+
+      const fail = (err: unknown): void => {
+        setPhotoDndError(err instanceof Error ? err.message : 'Could not paste that image.')
+      }
+
+      if (cd) {
+        const plain = cd.getData('text/plain').trim()
+        if (
+          plain.startsWith('data:image/') &&
+          plain.includes(',') &&
+          plain.length <= 3_500_000
+        ) {
+          e.preventDefault()
+          void normalizeEmbeddedPhotoDataUrl(plain).then(applyUrl).catch(fail)
+          return
+        }
+
+        if (dataTransferHasExplicitImageMime(cd)) {
+          e.preventDefault()
+          void clipboardDataToPhotoDataUrl(cd)
+            .then((url) => {
+              if (url) applyUrl(url)
+            })
+            .catch(fail)
+          return
+        }
+      }
+
+      let native: string | null = null
+      try {
+        native = window.book.readClipboardImageDataUrlSync()
+      } catch {
+        native = null
+      }
+      if (native) {
+        e.preventDefault()
+        void normalizeEmbeddedPhotoDataUrl(native).then(applyUrl).catch(fail)
+        return
+      }
+
+      if (cd) {
+        void clipboardDataToPhotoDataUrl(cd).then((url) => {
+          if (url) applyUrl(url)
+        })
+      }
+    }
+
+    window.addEventListener('paste', onPaste, true)
+    return () => window.removeEventListener('paste', onPaste, true)
+  }, [editing])
+
   const displayDraft = editing && draft ? draft : selected
 
   return (
@@ -280,7 +362,7 @@ export default function ContactsView(): React.ReactElement {
                     className={`contact-photo-dropzone focus-ring${photoDragOver ? ' contact-photo-dropzone--drag' : ''}`}
                     tabIndex={0}
                     role="button"
-                    aria-label="Contact photo: drop an image, paste from clipboard, or choose a file"
+                    aria-label="Contact photo: drop an image, paste (works anywhere in the form except text fields), or choose a file"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
@@ -309,37 +391,10 @@ export default function ContactsView(): React.ReactElement {
                       const f = e.dataTransfer.files?.[0]
                       if (f) void applyContactPhotoFile(f)
                     }}
-                    onPaste={(e) => {
-                      const plain = e.clipboardData.getData('text/plain').trim()
-                      if (
-                        plain.startsWith('data:image/') &&
-                        plain.includes(',') &&
-                        plain.length <= 3_500_000
-                      ) {
-                        e.preventDefault()
-                        setPhotoDndError(null)
-                        setDraft((d) => (d ? { ...d, photoUrl: plain } : d))
-                        return
-                      }
-                      void (async () => {
-                        try {
-                          const url = await clipboardDataToPhotoDataUrl(e.clipboardData)
-                          if (!url) return
-                          e.preventDefault()
-                          setPhotoDndError(null)
-                          setDraft((d) => (d ? { ...d, photoUrl: url } : d))
-                        } catch (err) {
-                          e.preventDefault()
-                          setPhotoDndError(
-                            err instanceof Error ? err.message : 'Could not paste that image.'
-                          )
-                        }
-                      })()
-                    }}
                   >
                     <ContactAvatar contact={displayDraft as Contact} size="lg" />
                     <div className="contact-photo-dropzone-hint muted small">
-                      Drop a photo here, click here and paste, or{' '}
+                      Drop a photo, paste while editing (⌘V outside text fields), or{' '}
                       <button
                         type="button"
                         className="btn-link"
