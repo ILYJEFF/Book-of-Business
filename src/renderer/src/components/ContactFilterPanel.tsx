@@ -43,7 +43,7 @@ export default function ContactFilterPanel({
   return (
     <div className="filter-panel">
       <div className="filter-panel-head">
-        <span className="filter-panel-title">Find people</span>
+        <span className="filter-panel-title">Index</span>
         <span className="filter-panel-count" aria-live="polite">
           {shown === total ? `${total} total` : `${shown} of ${total}`}
         </span>
@@ -52,7 +52,7 @@ export default function ContactFilterPanel({
       <div className="search-wrap filter-panel-search">
         <input
           className="search-input focus-ring"
-          placeholder="Name, title, email, company, industry, notes…"
+          placeholder="Search"
           value={filters.query}
           onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
           aria-label="Search contacts"
@@ -76,7 +76,7 @@ export default function ContactFilterPanel({
             )
           })}
         </div>
-        <p className="filter-hint muted small">Leave all off to include every relationship. Turn on one or more to match any of them.</p>
+        <p className="filter-hint muted small">All types until you pick one or more.</p>
       </div>
 
       <div className="filter-grid-2">

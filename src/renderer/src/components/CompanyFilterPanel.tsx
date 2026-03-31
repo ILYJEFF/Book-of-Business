@@ -31,7 +31,7 @@ export default function CompanyFilterPanel({
   return (
     <div className="filter-panel">
       <div className="filter-panel-head">
-        <span className="filter-panel-title">Find companies</span>
+        <span className="filter-panel-title">Index</span>
         <span className="filter-panel-count" aria-live="polite">
           {shown === total ? `${total} total` : `${shown} of ${total}`}
         </span>
@@ -40,7 +40,7 @@ export default function CompanyFilterPanel({
       <div className="search-wrap filter-panel-search">
         <input
           className="search-input focus-ring"
-          placeholder="Name, website, notes, address, industry…"
+          placeholder="Search"
           value={filters.query}
           onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
           aria-label="Search companies"
