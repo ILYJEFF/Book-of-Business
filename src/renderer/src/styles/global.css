@@ -1728,25 +1728,26 @@ a:hover {
 .channel-label-menu-wrap {
   position: relative;
   flex-shrink: 0;
-  width: 8.5rem;
-  min-width: 7.5rem;
+  width: 7.35rem;
+  min-width: 6.5rem;
 }
 .channel-label-menu-trigger {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 9px 10px 10px;
+  gap: 6px;
+  padding: 5px 8px 6px;
   margin: 0;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--bg-raised);
   color: var(--text-primary);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
+  line-height: 1.25;
   text-align: left;
   cursor: pointer;
   transition:
@@ -1796,13 +1797,13 @@ a:hover {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -2264,7 +2265,7 @@ a:hover {
   gap: 8px;
 }
 .stack-8--channel-fields {
-  gap: 12px;
+  gap: 8px;
 }
 .stack-8-row {
   display: flex;
@@ -2275,35 +2276,41 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 12px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
+  gap: 6px 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--divide);
   background: var(--bg-sunk);
+}
+.channel-field-row > .btn.btn-ghost {
+  padding: 5px 10px;
+  font-size: 12px;
+  align-self: center;
 }
 .channel-combo-inner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
 .channel-label-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 .channel-custom-label-input {
-  width: 6.75rem;
-  min-width: 5rem;
-  padding: 9px 10px 10px;
+  width: 6rem;
+  min-width: 4.5rem;
+  padding: 5px 8px 6px;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--bg-raised);
   color: var(--text-primary);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.25;
   transition:
     border-color 0.16s var(--ease-out),
     background 0.16s var(--ease-out);
@@ -2323,14 +2330,15 @@ a:hover {
 }
 .channel-value-input {
   width: 100%;
-  padding: 9px 10px 10px;
+  padding: 5px 9px 6px;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--bg-raised);
   color: var(--text-primary);
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.01em;
+  line-height: 1.35;
   transition:
     border-color 0.16s var(--ease-out),
     background 0.16s var(--ease-out);
@@ -2360,12 +2368,13 @@ a:hover {
 }
 .channel-label-readonly {
   flex-shrink: 0;
-  width: 8.5rem;
-  min-width: 7.5rem;
-  padding: 9px 10px;
-  font-size: 13px;
+  width: 7.35rem;
+  min-width: 6.5rem;
+  padding: 5px 8px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
+  line-height: 1.25;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
