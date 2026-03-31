@@ -1,0 +1,49 @@
+{
+  "name": "book-of-business",
+  "version": "1.0.0",
+  "description": "Book of Business — local-first contact intelligence",
+  "main": "out/main/index.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build && electron-builder",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.0.0",
+    "typescript": "~5.7.3",
+    "vite": "^6.2.1"
+  },
+  "build": {
+    "appId": "com.bookofbusiness.app",
+    "productName": "Book of Business",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "dist/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "zip"]
+    }
+  }
+}
