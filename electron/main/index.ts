@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { loadSettings, saveSettings } from './store'
@@ -26,6 +26,22 @@ import {
 
 let mainWindow: BrowserWindow | null = null
 
+/** No File/Edit/View/Window menus: app actions live in the renderer. macOS keeps a minimal app menu only. */
+function installApplicationMenu(): void {
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        {
+          label: app.name,
+          submenu: [{ role: 'quit' }]
+        }
+      ])
+    )
+  } else {
+    Menu.setApplicationMenu(null)
+  }
+}
+
 function getWorkspace(): string | null {
   return loadSettings().workspacePath
 }
@@ -37,6 +53,7 @@ function createWindow(): void {
     minWidth: 960,
     minHeight: 640,
     titleBarStyle: 'default',
+    autoHideMenuBar: true,
     backgroundColor: '#2a2622',
     show: false,
     webPreferences: {
@@ -59,6 +76,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  installApplicationMenu()
   createWindow()
 
   ipcMain.handle('settings:getWorkspace', () => getWorkspace())
