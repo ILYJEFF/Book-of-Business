@@ -9,7 +9,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build && electron-builder",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "icon:from-artwork": "sips --cropToHeightWidth 620 620 image.png --out /tmp/book-icon-crop.png && sips -z 1024 1024 /tmp/book-icon-crop.png --out build/icon.png && echo Updated build/icon.png (lower 620 = more zoom)"
   },
   "dependencies": {
     "@fontsource/literata": "^5.2.8",
