@@ -22,6 +22,11 @@ export default function CompaniesView(): React.ReactElement {
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  const selected = useMemo(
+    () => companies.find((c) => c.id === selectedId) ?? null,
+    [companies, selectedId]
+  )
+
   const {
     photoDndError,
     photoDragOver,
@@ -31,18 +36,13 @@ export default function CompaniesView(): React.ReactElement {
     resetPhotoFieldUi,
     applyPhotoFile,
     onPhotoFileInputChange,
-    onPhotoFieldPasteCapture,
-    setPhotoDndError
-  } = useWorkspacePhotoUrl<Company>(editing, draft, setDraft)
+    setPhotoDndError,
+    onPhotoFieldPasteCapture
+  } = useWorkspacePhotoUrl<Company>(editing, draft, setDraft, editing ? selected : null)
 
   const industryMap = useMemo(
     () => new Map(industries.map((i) => [i.id, i] as const)),
     [industries]
-  )
-
-  const selected = useMemo(
-    () => companies.find((c) => c.id === selectedId) ?? null,
-    [companies, selectedId]
   )
 
   const filtered = useMemo(
@@ -163,7 +163,7 @@ export default function CompaniesView(): React.ReactElement {
     setConfirmDelete(false)
   }, [selected, refresh])
 
-  const display = editing && draft ? draft : selected
+  const display = editing ? (draft ?? selected) : selected
 
   const companyLiOpenUrl = useMemo(() => {
     if (!display) return null
@@ -422,7 +422,6 @@ export default function CompaniesView(): React.ReactElement {
                         photoFileInputRef.current?.click()
                       }
                     }}
-                    onPasteCapture={(e) => onPhotoFieldPasteCapture(e.nativeEvent)}
                     onDragEnter={(ev) => {
                       ev.preventDefault()
                       ev.stopPropagation()
@@ -438,6 +437,7 @@ export default function CompaniesView(): React.ReactElement {
                       ev.stopPropagation()
                       ev.dataTransfer.dropEffect = 'copy'
                     }}
+                    onPasteCapture={onPhotoFieldPasteCapture}
                     onDrop={(ev) => {
                       ev.preventDefault()
                       ev.stopPropagation()

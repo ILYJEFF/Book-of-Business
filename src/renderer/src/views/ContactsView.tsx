@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Company, Contact, Industry } from '../../../shared/types'
+import type { Company, Contact, ContactCategory, Industry, Tag } from '../../../shared/types'
 import LabeledContactChannelRow from '../components/LabeledContactChannelRow'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
@@ -11,27 +11,76 @@ import IndustrySearchPick from '../components/IndustrySearchPick'
 import LinkedInGlyph from '../components/LinkedInGlyph'
 import { useWorkspacePhotoUrl } from '../hooks/useWorkspacePhotoUrl'
 import { contactDisplayName, companyById, contactLinkedInOpenUrl, industryPathLabel } from '../lib/format'
-import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
+import {
+  CONTACT_CATEGORIES,
+  CONTACT_CATEGORY_ORDER,
+  contactPassesFilters,
+  createDefaultContactFilters
+} from '../lib/recordFilters'
 
 function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
   return {
     firstName: '',
     lastName: '',
+    favorite: false,
     title: '',
-    category: 'work',
+    categories: ['work'],
     emails: [],
     phones: [{ label: 'Mobile', value: '' }],
     linkedinUrl: '',
     website: '',
     companyIds: [],
     industryIds: [],
+    tagIds: [],
     notes: '',
-    address: ''
+    address: '',
+    attachments: []
   }
 }
 
+/** Write contact with new tag ids (used when applying a tag from profile view without opening Edit). */
+async function saveContactWithTagIds(base: Contact, tagIds: string[]): Promise<Contact> {
+  const first = (base.firstName ?? '').trim()
+  const last = (base.lastName ?? '').trim()
+  const emails = (base.emails ?? [])
+    .map((e) => ({
+      label: (e.label ?? 'Other').trim() || 'Other',
+      value: (e.value ?? '').trim()
+    }))
+    .filter((e) => e.value)
+  const deptRaw = base.department
+  const departmentField: string | null =
+    deptRaw != null && String(deptRaw).trim() ? String(deptRaw).trim() : null
+  const {
+    department: _omitDept,
+    photoUrl: headshotData,
+    linkedinUrl: liDraft,
+    website: webDraft,
+    ...draftRest
+  } = base
+  return window.book.saveContact(
+    {
+      ...draftRest,
+      firstName: first || 'Unknown',
+      lastName: last || '',
+      categories: base.categories?.length ? base.categories : ['work'],
+      emails,
+      phones: (base.phones ?? []).filter((p) => p.value?.trim()),
+      companyIds: base.companyIds ?? [],
+      industryIds: base.industryIds ?? [],
+      tagIds
+    },
+    departmentField,
+    {
+      photoUrl: typeof headshotData === 'string' ? headshotData : '',
+      linkedinUrl: (liDraft ?? '').trim(),
+      website: (webDraft ?? '').trim()
+    }
+  )
+}
+
 export default function ContactsView(): React.ReactElement {
-  const { contacts, companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
+  const { contacts, companies, industries, tags, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
   const [filters, setFilters] = useState(createDefaultContactFilters)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -39,6 +88,14 @@ export default function ContactsView(): React.ReactElement {
   const [draft, setDraft] = useState<Partial<Contact> | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [favBusyId, setFavBusyId] = useState<string | null>(null)
+  const [newTagName, setNewTagName] = useState('')
+  const [tagCreateBusy, setTagCreateBusy] = useState(false)
+
+  const selected = useMemo(
+    () => contacts.find((c) => c.id === selectedId) ?? null,
+    [contacts, selectedId]
+  )
 
   const {
     photoDndError,
@@ -49,9 +106,9 @@ export default function ContactsView(): React.ReactElement {
     resetPhotoFieldUi,
     applyPhotoFile,
     onPhotoFileInputChange,
-    onPhotoFieldPasteCapture,
-    setPhotoDndError
-  } = useWorkspacePhotoUrl<Contact>(editing, draft, setDraft)
+    setPhotoDndError,
+    onPhotoFieldPasteCapture
+  } = useWorkspacePhotoUrl<Contact>(editing, draft, setDraft, editing ? selected : null)
 
   const companyMap = useMemo(
     () => new Map(companies.map((c) => [c.id, c] as const)),
@@ -61,15 +118,11 @@ export default function ContactsView(): React.ReactElement {
     () => new Map(industries.map((i) => [i.id, i] as const)),
     [industries]
   )
-
-  const selected = useMemo(
-    () => contacts.find((c) => c.id === selectedId) ?? null,
-    [contacts, selectedId]
-  )
+  const tagMap = useMemo(() => new Map(tags.map((t) => [t.id, t] as const)), [tags])
 
   const filtered = useMemo(
-    () => contacts.filter((c) => contactPassesFilters(c, filters, companyMap, industryMap)),
-    [contacts, filters, companyMap, industryMap]
+    () => contacts.filter((c) => contactPassesFilters(c, filters, companyMap, industryMap, tagMap)),
+    [contacts, filters, companyMap, industryMap, tagMap]
   )
 
   const startCreate = useCallback(() => {
@@ -78,6 +131,7 @@ export default function ContactsView(): React.ReactElement {
     setEditing(true)
     setConfirmDelete(false)
     resetPhotoFieldUi()
+    setNewTagName('')
     setDraft({ ...emptyContact(), id: undefined })
   }, [resetPhotoFieldUi])
 
@@ -88,6 +142,7 @@ export default function ContactsView(): React.ReactElement {
       setEditing(true)
       setConfirmDelete(false)
       resetPhotoFieldUi()
+      setNewTagName('')
       setDraft({
         ...emptyContact(),
         id: undefined,
@@ -105,11 +160,13 @@ export default function ContactsView(): React.ReactElement {
     setEditing(true)
     setConfirmDelete(false)
     resetPhotoFieldUi()
+    setNewTagName('')
     setDraft({ ...c })
   }, [resetPhotoFieldUi])
 
   const cancelEdit = useCallback(() => {
     resetPhotoFieldUi()
+    setNewTagName('')
     if (creating) {
       setCreating(false)
       setDraft(null)
@@ -150,11 +207,12 @@ export default function ContactsView(): React.ReactElement {
           ...draftRest,
           firstName: first || 'Unknown',
           lastName: last || '',
-          category: draft.category ?? 'work',
+          categories: draft.categories?.length ? draft.categories : ['work'],
           emails,
           phones: (draft.phones ?? []).filter((p) => p.value?.trim()),
           companyIds: draft.companyIds ?? [],
-          industryIds: draft.industryIds ?? []
+          industryIds: draft.industryIds ?? [],
+          tagIds: draft.tagIds ?? []
         },
         departmentField,
         {
@@ -169,10 +227,41 @@ export default function ContactsView(): React.ReactElement {
       setEditing(false)
       setCreating(false)
       setConfirmDelete(false)
+      setNewTagName('')
     } finally {
       setSaving(false)
     }
   }, [draft, refresh])
+
+  const createTagFromProfile = useCallback(async () => {
+    const name = newTagName.trim()
+    if (!name || tagCreateBusy) return
+    setTagCreateBusy(true)
+    try {
+      const savedTag = await window.book.saveTag({ name })
+      await refresh({ background: true })
+
+      const persistOnDiskImmediately = !creating && selected != null && !editing
+
+      if (persistOnDiskImmediately) {
+        const nextTagIds = [...new Set([...(selected.tagIds ?? []), savedTag.id])]
+        const updated = await saveContactWithTagIds(selected, nextTagIds)
+        await refresh({ background: true })
+        setDraft({ ...updated })
+      } else if (draft) {
+        setDraft((d) => {
+          if (!d) return d
+          const cur = new Set(d.tagIds ?? [])
+          cur.add(savedTag.id)
+          return { ...d, tagIds: [...cur] }
+        })
+      }
+
+      setNewTagName('')
+    } finally {
+      setTagCreateBusy(false)
+    }
+  }, [newTagName, tagCreateBusy, refresh, creating, selected, editing, draft])
 
   const remove = useCallback(async () => {
     if (!selected) return
@@ -182,6 +271,7 @@ export default function ContactsView(): React.ReactElement {
     setDraft(null)
     setEditing(false)
     setConfirmDelete(false)
+    setNewTagName('')
   }, [selected, refresh])
 
   const openDetail = useCallback(
@@ -190,6 +280,7 @@ export default function ContactsView(): React.ReactElement {
       setCreating(false)
       setEditing(false)
       resetPhotoFieldUi()
+      setNewTagName('')
       setDraft({ ...c })
       setConfirmDelete(false)
     },
@@ -207,7 +298,10 @@ export default function ContactsView(): React.ReactElement {
     if (c) openDetail(c)
   }, [openRecordRequest, contacts, clearOpenRecordRequest, openDetail])
 
-  const displayDraft = editing && draft ? draft : selected
+  const displayDraft = editing ? (draft ?? selected) : selected
+
+  const showInlineTagCreate =
+    Boolean(displayDraft && !creating && (displayDraft as Contact).id) || (creating && editing)
 
   const linkedInOpenUrl = useMemo(() => {
     if (!displayDraft) return null
@@ -219,6 +313,28 @@ export default function ContactsView(): React.ReactElement {
     void window.book.openExternal(linkedInOpenUrl)
   }, [linkedInOpenUrl])
 
+  const toggleFavoriteForContact = useCallback(
+    async (c: Contact, e?: React.MouseEvent | React.KeyboardEvent) => {
+      e?.stopPropagation()
+      const next = !(c.favorite === true)
+      setFavBusyId(c.id)
+      try {
+        await window.book.setContactFavorite(c.id, next)
+        await refresh({ background: true })
+        setDraft((d) => (d && d.id === c.id ? { ...d, favorite: next } : d))
+      } finally {
+        setFavBusyId(null)
+      }
+    },
+    [refresh]
+  )
+
+  const toggleFavoriteInDetail = useCallback(async () => {
+    const c = displayDraft as Contact | null
+    if (!c?.id || creating) return
+    await toggleFavoriteForContact(c)
+  }, [displayDraft, creating, toggleFavoriteForContact])
+
   return (
     <div className="split-view">
       <div className="list-column">
@@ -229,6 +345,7 @@ export default function ContactsView(): React.ReactElement {
             companies={companies}
             industries={industries}
             industryMap={industryMap}
+            tags={tags}
             total={contacts.length}
             shown={filtered.length}
             onNew={startCreate}
@@ -256,6 +373,17 @@ export default function ContactsView(): React.ReactElement {
                 <div className="list-row-main">
                   <div className="list-row-title-line">
                     <span className="list-row-title">{contactDisplayName(c)}</span>
+                    <button
+                      type="button"
+                      className={`list-row-favorite-btn focus-ring${c.favorite === true ? ' list-row-favorite-btn--on' : ''}`}
+                      aria-label={c.favorite === true ? 'Remove from favorites' : 'Add to favorites'}
+                      aria-pressed={c.favorite === true}
+                      disabled={favBusyId === c.id}
+                      onClick={(e) => void toggleFavoriteForContact(c, e)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      ★
+                    </button>
                     {rowLi ? (
                       <button
                         type="button"
@@ -329,6 +457,20 @@ export default function ContactsView(): React.ReactElement {
                 </div>
               </div>
               <div className="detail-actions">
+                {!creating && (displayDraft as Contact).id ? (
+                  <button
+                    type="button"
+                    className={`btn-favorite focus-ring${(displayDraft as Contact).favorite === true ? ' btn-favorite--on' : ''}`}
+                    aria-pressed={(displayDraft as Contact).favorite === true}
+                    aria-label={
+                      (displayDraft as Contact).favorite === true ? 'Remove from favorites' : 'Add to favorites'
+                    }
+                    disabled={favBusyId === (displayDraft as Contact).id || saving}
+                    onClick={() => void toggleFavoriteInDetail()}
+                  >
+                    ★
+                  </button>
+                ) : null}
                 {!editing ? (
                   <>
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
@@ -376,7 +518,8 @@ export default function ContactsView(): React.ReactElement {
               <div className="alert-danger">
                 <div className="alert-danger-title">Delete this contact?</div>
                 <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
-                  The JSON file will be removed from your library folder.
+                  The JSON file and any documents in <code className="inline-code">contact-attachments</code> for this
+                  person will be removed from your library folder.
                 </p>
                 <div className="alert-danger-actions">
                   <button type="button" className="btn btn-ghost focus-ring" onClick={() => setConfirmDelete(false)}>
@@ -413,7 +556,6 @@ export default function ContactsView(): React.ReactElement {
                         photoFileInputRef.current?.click()
                       }
                     }}
-                    onPasteCapture={(e) => onPhotoFieldPasteCapture(e.nativeEvent)}
                     onDragEnter={(ev) => {
                       ev.preventDefault()
                       ev.stopPropagation()
@@ -429,6 +571,7 @@ export default function ContactsView(): React.ReactElement {
                       ev.stopPropagation()
                       ev.dataTransfer.dropEffect = 'copy'
                     }}
+                    onPasteCapture={onPhotoFieldPasteCapture}
                     onDrop={(ev) => {
                       ev.preventDefault()
                       ev.stopPropagation()
@@ -489,11 +632,50 @@ export default function ContactsView(): React.ReactElement {
               )}
               <div>
                 <span className="field-label">Relationship</span>
-                <CategoryPills
-                  value={(displayDraft.category ?? 'work') as Contact['category']}
-                  disabled={!editing}
-                  onChange={(cat) => editing && setDraft((d) => (d ? { ...d, category: cat } : d))}
-                />
+                {!editing ? (
+                  <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
+                    {((displayDraft as Contact).categories ?? ['work'])
+                      .map(
+                        (cat) => CONTACT_CATEGORIES.find((c) => c.id === cat)?.label ?? cat
+                      )
+                      .join(' · ')}
+                  </p>
+                ) : (
+                  <>
+                    <CategoryPills
+                      value={
+                        (displayDraft as Contact).categories?.length
+                          ? CONTACT_CATEGORY_ORDER.filter((c) =>
+                              (displayDraft as Contact).categories!.includes(c)
+                            )
+                          : ['work']
+                      }
+                      disabled={!editing}
+                      onToggle={(cat) => {
+                        if (!editing) return
+                        setDraft((d) => {
+                          if (!d) return d
+                          const cur = new Set(
+                            d.categories?.length ? d.categories : (['work'] as ContactCategory[])
+                          )
+                          if (cur.has(cat)) {
+                            cur.delete(cat)
+                            if (cur.size === 0) cur.add('work')
+                          } else {
+                            cur.add(cat)
+                          }
+                          return {
+                            ...d,
+                            categories: CONTACT_CATEGORY_ORDER.filter((c) => cur.has(c))
+                          }
+                        })
+                      }}
+                    />
+                    <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
+                      Select every relationship that fits. At least one stays on.
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="form-row-2">
@@ -677,6 +859,68 @@ export default function ContactsView(): React.ReactElement {
               />
 
               <div>
+                <span className="field-label">Tags</span>
+                {showInlineTagCreate ? (
+                  <>
+                    <div className="contact-tag-create">
+                      <input
+                        type="text"
+                        className="text-input focus-ring contact-tag-create-input"
+                        placeholder="e.g. Open to relocation, Speaks Spanish"
+                        value={newTagName}
+                        disabled={tagCreateBusy || saving}
+                        aria-label="New tag name"
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            void createTagFromProfile()
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-ghost focus-ring contact-tag-create-btn"
+                        disabled={!newTagName.trim() || tagCreateBusy || saving}
+                        onClick={() => void createTagFromProfile()}
+                      >
+                        {tagCreateBusy ? 'Creating…' : 'Create tag'}
+                      </button>
+                    </div>
+                    <p className="muted small contact-tag-create-hint">
+                      {editing
+                        ? 'Adds the tag to your library (same list as Tags in the sidebar) and checks it for this person. If you are editing other fields, press Save when done.'
+                        : 'Adds the tag to your library and applies it to this person right away. Use Edit to turn other tags on or off.'}
+                    </p>
+                  </>
+                ) : null}
+                <MultiPick
+                  empty="No tags in the library yet. Create one above (open a saved profile or edit a new contact) or use Tags in the sidebar."
+                  options={tags}
+                  selectedIds={(displayDraft as Contact).tagIds ?? []}
+                  disabled={!editing}
+                  onToggle={(id, on) => {
+                    if (!editing) return
+                    setDraft((d) => {
+                      if (!d) return d
+                      const cur = new Set(d.tagIds ?? [])
+                      if (on) cur.add(id)
+                      else cur.delete(id)
+                      return { ...d, tagIds: [...cur] }
+                    })
+                  }}
+                />
+              </div>
+
+              <ContactDocumentsSection
+                contactId={creating ? undefined : (displayDraft as Contact).id}
+                creating={creating}
+                attachments={(displayDraft as Contact).attachments}
+                refresh={refresh}
+                setDraft={setDraft}
+              />
+
+              <div>
                 <label className="field-label" htmlFor="notes">
                   Notes
                 </label>
@@ -706,6 +950,129 @@ export default function ContactsView(): React.ReactElement {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function formatAttachmentSize(n: number | undefined): string {
+  if (n == null || !Number.isFinite(n)) return ''
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${n < 10 * 1024 ? (n / 1024).toFixed(1) : Math.round(n / 1024)} KB`
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function ContactDocumentsSection({
+  contactId,
+  creating,
+  attachments,
+  refresh,
+  setDraft
+}: {
+  contactId: string | undefined
+  creating: boolean
+  attachments: Contact['attachments']
+  refresh: (opts?: { background?: boolean }) => Promise<void>
+  setDraft: React.Dispatch<React.SetStateAction<Partial<Contact> | null>>
+}): React.ReactElement {
+  const [adding, setAdding] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+
+  const list = attachments ?? []
+
+  if (creating || !contactId) {
+    return (
+      <div>
+        <span className="field-label">Documents</span>
+        <p className="muted small" style={{ marginTop: 4, marginBottom: 0 }}>
+          Save this contact first to attach résumés, personality profiles, references, cover letters, and other files.
+        </p>
+      </div>
+    )
+  }
+
+  const onAdd = async (): Promise<void> => {
+    setAdding(true)
+    try {
+      const r = await window.book.addContactAttachments(contactId)
+      if (!r.canceled) {
+        await refresh({ background: true })
+        setDraft((d) => (d && d.id === contactId ? { ...d, attachments: r.contact.attachments } : d))
+      }
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const onRemove = async (attachmentId: string): Promise<void> => {
+    setRemovingId(attachmentId)
+    try {
+      const updated = await window.book.removeContactAttachment(contactId, attachmentId)
+      await refresh({ background: true })
+      setDraft((d) => (d && d.id === contactId ? { ...d, attachments: updated.attachments } : d))
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
+  return (
+    <div>
+      <div className="contact-docs-head">
+        <span className="field-label">Documents</span>
+        <button
+          type="button"
+          className="btn btn-ghost focus-ring contact-docs-add"
+          disabled={adding}
+          onClick={() => void onAdd()}
+        >
+          {adding ? 'Adding…' : 'Add files…'}
+        </button>
+      </div>
+      <p className="muted small contact-docs-hint">
+        Stored in your library under <code className="inline-code">contact-attachments</code>. Open in your default app
+        or reveal in the folder.
+      </p>
+      {list.length === 0 ? (
+        <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
+          No files yet.
+        </p>
+      ) : (
+        <ul className="contact-docs-list" aria-label="Attached documents">
+          {list.map((a) => (
+            <li key={a.id} className="contact-docs-row">
+              <div className="contact-docs-row-main">
+                <span className="contact-docs-name">{a.fileName}</span>
+                {a.sizeBytes != null ? (
+                  <span className="contact-docs-meta muted small">{formatAttachmentSize(a.sizeBytes)}</span>
+                ) : null}
+              </div>
+              <div className="contact-docs-actions">
+                <button
+                  type="button"
+                  className="btn-link focus-ring"
+                  onClick={() => void window.book.openContactAttachment(a.relativePath)}
+                >
+                  Open
+                </button>
+                <button
+                  type="button"
+                  className="btn-link focus-ring"
+                  onClick={() => void window.book.revealContactAttachment(a.relativePath)}
+                >
+                  Show in folder
+                </button>
+                <button
+                  type="button"
+                  className="btn-link contact-docs-remove focus-ring"
+                  disabled={removingId === a.id}
+                  onClick={() => void onRemove(a.id)}
+                >
+                  {removingId === a.id ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -899,10 +1266,10 @@ function MultiPick({
   disabled,
   onToggle
 }: {
-  label: string
+  label?: string
   empty: string
-  options: Company[] | Industry[]
-  getOptionLabel?: (o: Company | Industry) => string
+  options: Company[] | Industry[] | Tag[]
+  getOptionLabel?: (o: Company | Industry | Tag) => string
   selectedIds: string[]
   disabled: boolean
   onToggle: (id: string, on: boolean) => void
@@ -910,7 +1277,7 @@ function MultiPick({
   const set = useMemo(() => new Set(selectedIds), [selectedIds])
   return (
     <div>
-      <span className="field-label">{label}</span>
+      {label ? <span className="field-label">{label}</span> : null}
       {options.length === 0 ? (
         <div className="muted small">{empty}</div>
       ) : (
