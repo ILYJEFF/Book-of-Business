@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
 import ContactAvatar from '../components/ContactAvatar'
-import ContactFilterPanel from '../components/ContactFilterPanel'
+import ContactFilterPanel, { ContactRefineSheet } from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
 import LinkedInGlyph from '../components/LinkedInGlyph'
@@ -91,6 +91,7 @@ export default function ContactsView(): React.ReactElement {
   const [favBusyId, setFavBusyId] = useState<string | null>(null)
   const [newTagName, setNewTagName] = useState('')
   const [tagCreateBusy, setTagCreateBusy] = useState(false)
+  const [contactRefineOpen, setContactRefineOpen] = useState(false)
 
   const selected = useMemo(
     () => contacts.find((c) => c.id === selectedId) ?? null,
@@ -338,91 +339,102 @@ export default function ContactsView(): React.ReactElement {
   return (
     <div className="split-view">
       <div className="list-column">
-        <div className="list-toolbar list-toolbar--filters">
-          <ContactFilterPanel
-            filters={filters}
-            setFilters={setFilters}
-            companies={companies}
-            industries={industries}
-            industryMap={industryMap}
-            tags={tags}
-            total={contacts.length}
-            shown={filtered.length}
-            onNew={startCreate}
-          />
-        </div>
-        <div className="scroll-y list-rows">
-          {filtered.map((c) => {
-            const on = c.id === selectedId && !creating
-            const rowLi = contactLinkedInOpenUrl(c)
-            return (
-              <div
-                key={c.id}
-                role="button"
-                tabIndex={0}
-                className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
-                onClick={() => openDetail(c)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    openDetail(c)
-                  }
-                }}
-              >
-                <ContactAvatar key={c.id} contact={c} size="sm" />
-                <div className="list-row-main">
-                  <div className="list-row-title-line">
-                    <span className="list-row-title">{contactDisplayName(c)}</span>
-                    <button
-                      type="button"
-                      className={`list-row-favorite-btn focus-ring${c.favorite === true ? ' list-row-favorite-btn--on' : ''}`}
-                      aria-label={c.favorite === true ? 'Remove from favorites' : 'Add to favorites'}
-                      aria-pressed={c.favorite === true}
-                      disabled={favBusyId === c.id}
-                      onClick={(e) => void toggleFavoriteForContact(c, e)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                      ★
-                    </button>
-                    {rowLi ? (
-                      <button
-                        type="button"
-                        className="list-row-linkedin-emblem focus-ring"
-                        aria-label={`Open ${contactDisplayName(c)} on LinkedIn`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void window.book.openExternal(rowLi)
-                        }}
-                        onKeyDown={(e) => {
-                          e.stopPropagation()
-                        }}
-                      >
-                        <LinkedInGlyph className="list-row-linkedin-emblem-icon" />
-                      </button>
-                    ) : null}
+        <div className="list-column-stack">
+          <div className="list-toolbar list-toolbar--filters">
+            <ContactFilterPanel
+              filters={filters}
+              setFilters={setFilters}
+              total={contacts.length}
+              shown={filtered.length}
+              onNew={startCreate}
+              onOpenRefine={() => setContactRefineOpen(true)}
+            />
+          </div>
+          <div className="list-main">
+            <ContactRefineSheet
+              open={contactRefineOpen}
+              onClose={() => setContactRefineOpen(false)}
+              filters={filters}
+              setFilters={setFilters}
+              companies={companies}
+              industries={industries}
+              industryMap={industryMap}
+              tags={tags}
+            />
+            <div className="scroll-y list-rows">
+              {filtered.map((c) => {
+                const on = c.id === selectedId && !creating
+                const rowLi = contactLinkedInOpenUrl(c)
+                return (
+                  <div
+                    key={c.id}
+                    role="button"
+                    tabIndex={0}
+                    className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
+                    onClick={() => openDetail(c)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        openDetail(c)
+                      }
+                    }}
+                  >
+                    <ContactAvatar key={c.id} contact={c} size="sm" />
+                    <div className="list-row-main">
+                      <div className="list-row-title-line">
+                        <span className="list-row-title">{contactDisplayName(c)}</span>
+                        <button
+                          type="button"
+                          className={`list-row-favorite-btn focus-ring${c.favorite === true ? ' list-row-favorite-btn--on' : ''}`}
+                          aria-label={c.favorite === true ? 'Remove from favorites' : 'Add to favorites'}
+                          aria-pressed={c.favorite === true}
+                          disabled={favBusyId === c.id}
+                          onClick={(e) => void toggleFavoriteForContact(c, e)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          ★
+                        </button>
+                        {rowLi ? (
+                          <button
+                            type="button"
+                            className="list-row-linkedin-emblem focus-ring"
+                            aria-label={`Open ${contactDisplayName(c)} on LinkedIn`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void window.book.openExternal(rowLi)
+                            }}
+                            onKeyDown={(e) => {
+                              e.stopPropagation()
+                            }}
+                          >
+                            <LinkedInGlyph className="list-row-linkedin-emblem-icon" />
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="list-row-sub">
+                        {c.title ||
+                          c.department ||
+                          c.companyIds.map((id) => companyById(companyMap, id)).join(', ') ||
+                          'No title yet'}
+                      </div>
+                    </div>
                   </div>
-                  <div className="list-row-sub">
-                    {c.title ||
-                      c.department ||
-                      c.companyIds.map((id) => companyById(companyMap, id)).join(', ') ||
-                      'No title yet'}
+                )
+              })}
+              {filtered.length === 0 &&
+                (contacts.length === 0 ? (
+                  <div className="list-empty">
+                    <p className="list-empty-title">No contacts yet</p>
+                    <p className="list-empty-text">Your people will appear here as soon as you add the first one.</p>
                   </div>
-                </div>
-              </div>
-            )
-          })}
-          {filtered.length === 0 &&
-            (contacts.length === 0 ? (
-              <div className="list-empty">
-                <p className="list-empty-title">No contacts yet</p>
-                <p className="list-empty-text">Your people will appear here as soon as you add the first one.</p>
-              </div>
-            ) : (
-              <div className="list-empty">
-                <p className="list-empty-title">No results</p>
-                <p className="list-empty-text">Nothing matches your filters or search. Clear filters or try different terms.</p>
-              </div>
-            ))}
+                ) : (
+                  <div className="list-empty">
+                    <p className="list-empty-title">No results</p>
+                    <p className="list-empty-text">Nothing matches your filters or search. Clear filters or try different terms.</p>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       </div>
 
