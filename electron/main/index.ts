@@ -46,7 +46,23 @@ function getWorkspace(): string | null {
   return loadSettings().workspacePath
 }
 
+/** Dock / taskbar / window icon: dev uses repo `build/icon.png`; packaged uses generated assets in Resources. */
+function resolveWindowIcon(): string | undefined {
+  if (app.isPackaged) {
+    const r = process.resourcesPath
+    if (process.platform === 'win32') {
+      const ico = join(r, 'icon.ico')
+      if (existsSync(ico)) return ico
+    }
+    const png = join(r, 'icon.png')
+    if (existsSync(png)) return png
+  }
+  const dev = join(process.cwd(), 'build', 'icon.png')
+  return existsSync(dev) ? dev : undefined
+}
+
 function createWindow(): void {
+  const icon = resolveWindowIcon()
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -56,6 +72,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     backgroundColor: '#2a2622',
     show: false,
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -77,6 +94,14 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   installApplicationMenu()
+  const dockIcon = resolveWindowIcon()
+  if (process.platform === 'darwin' && dockIcon && !app.isPackaged) {
+    try {
+      app.dock.setIcon(dockIcon)
+    } catch {
+      /* ignore */
+    }
+  }
   createWindow()
 
   ipcMain.handle('settings:getWorkspace', () => getWorkspace())

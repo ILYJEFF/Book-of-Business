@@ -35,6 +35,7 @@
   "build": {
     "appId": "com.bookofbusiness.app",
     "productName": "Book of Business",
+    "icon": "build/icon.png",
     "directories": {
       "output": "release"
     },
