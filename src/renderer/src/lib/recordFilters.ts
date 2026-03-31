@@ -74,6 +74,16 @@ export function activeContactFilterCount(f: ContactFilterModel): number {
   return n
 }
 
+/** Facet controls only (not search text). Used for badges and expand logic. */
+export function facetContactFilterCount(f: ContactFilterModel): number {
+  let n = 0
+  if (f.categories.size > 0) n++
+  if (f.companyId) n++
+  if (f.industryId) n++
+  if (f.mapPin !== 'any') n++
+  return n
+}
+
 export interface CompanyFilterModel {
   query: string
   industryId: string
@@ -112,6 +122,13 @@ export function companyPassesFilters(
 
 export function activeCompanyFilterCount(f: CompanyFilterModel): number {
   let n = f.query.trim() ? 1 : 0
+  if (f.industryId) n++
+  if (f.mapPin !== 'any') n++
+  return n
+}
+
+export function facetCompanyFilterCount(f: CompanyFilterModel): number {
+  let n = 0
   if (f.industryId) n++
   if (f.mapPin !== 'any') n++
   return n

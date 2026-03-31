@@ -170,9 +170,10 @@ export default function CompaniesView(): React.ReactElement {
       <div className="scroll-y detail-column">
         {!display && (
           <div className="empty-canvas">
+            <p className="folio-kicker">Companies</p>
             <div className="empty-canvas-rule" aria-hidden />
             <h2 className="empty-canvas-title">No company selected</h2>
-            <p className="empty-canvas-text">Pick from the list or add a company. One file per org.</p>
+            <p className="empty-canvas-text">Choose a company from the list or add one. One JSON file per organization.</p>
             <div className="empty-canvas-actions">
               <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
                 New company

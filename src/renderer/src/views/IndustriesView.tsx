@@ -138,14 +138,21 @@ export default function IndustriesView(): React.ReactElement {
   return (
     <div className="split-view">
       <div className="list-column list-column--industries">
-        <div className="list-toolbar">
+        <div className="list-toolbar list-toolbar--industries">
+          <div className="list-toolbar-intro">
+            <h2 className="list-section-title">Industries</h2>
+            <p className="list-section-meta">{industries.length} in library</p>
+          </div>
           <button type="button" className="btn btn-primary focus-ring btn-block" onClick={() => startCreate()}>
             New top-level industry
           </button>
-          <p className="industry-list-hint">
-            Nesting is saved on each file. Pick a parent with <strong>Edit</strong>, or use <strong>Add sub-industry</strong>{' '}
-            on a row. Flat names here mean nothing is filed under a parent yet.
-          </p>
+          <details className="toolbar-hint-details">
+            <summary className="toolbar-hint-summary">How nesting works</summary>
+            <p className="industry-list-hint toolbar-hint-body">
+              Nesting is stored on each file. Set a parent in <strong>Edit</strong>, or use <strong>Add sub-industry</strong> on
+              a row. Top-level rows have no parent until you assign one.
+            </p>
+          </details>
         </div>
         <div className="scroll-y list-rows list-rows--industry-tree">
           {ordered.map(({ industry: i, depth }) => {

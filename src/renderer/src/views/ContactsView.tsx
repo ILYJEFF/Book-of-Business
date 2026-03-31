@@ -201,9 +201,10 @@ export default function ContactsView(): React.ReactElement {
       <div className="scroll-y detail-column">
         {!displayDraft && !creating && (
           <div className="empty-canvas">
+            <p className="folio-kicker">Contacts</p>
             <div className="empty-canvas-rule" aria-hidden />
             <h2 className="empty-canvas-title">No row selected</h2>
-            <p className="empty-canvas-text">Open an entry from the list, or add one. Each person is one JSON file in your folder.</p>
+            <p className="empty-canvas-text">Pick someone from the list or create a contact. One JSON file per person in your library folder.</p>
             <div className="empty-canvas-actions">
               <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
                 New contact

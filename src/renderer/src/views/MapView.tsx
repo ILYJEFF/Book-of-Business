@@ -3,8 +3,8 @@ import L from 'leaflet'
 import { useApp } from '../context/AppContext'
 import { contactDisplayName } from '../lib/format'
 
-const PIN_CONTACT = '#8b5a2b'
-const PIN_COMPANY = '#5c6e5c'
+const PIN_CONTACT = '#9a6b3c'
+const PIN_COMPANY = '#5f735f'
 
 function pinIcon(color: string): L.DivIcon {
   return L.divIcon({
@@ -106,17 +106,32 @@ export default function MapView(): React.ReactElement {
   return (
     <div className="map-view">
       <div className="map-toolbar">
-        <p className="map-toolbar-stats">
-          <strong>{plotted}</strong> on the map
-          {(unmappedContacts > 0 || unmappedCompanies > 0) && (
-            <span className="muted">
-              {' '}
-              · {unmappedContacts} people and {unmappedCompanies} companies without coordinates
-            </span>
-          )}
-        </p>
+        <div className="map-toolbar-top">
+          <div>
+            <h2 className="list-section-title map-toolbar-title">Map</h2>
+            <p className="map-toolbar-stats">
+              <strong>{plotted}</strong> pinned
+              {(unmappedContacts > 0 || unmappedCompanies > 0) && (
+                <span className="muted">
+                  {' '}
+                  · {unmappedContacts} people, {unmappedCompanies} companies not pinned
+                </span>
+              )}
+            </p>
+          </div>
+          <ul className="map-legend" aria-label="Pin colors">
+            <li>
+              <span className="map-legend-dot map-legend-dot--contact" aria-hidden />
+              Person
+            </li>
+            <li>
+              <span className="map-legend-dot map-legend-dot--company" aria-hidden />
+              Company
+            </li>
+          </ul>
+        </div>
         <p className="map-toolbar-note muted small">
-          Geocoding uses OpenStreetMap Nominatim over the network. Click a pin to open that record.
+          Tiles and search use OpenStreetMap. Click a pin to open that record.
         </p>
       </div>
       <div className="map-frame">
