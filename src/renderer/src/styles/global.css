@@ -2267,6 +2267,31 @@ a:hover {
 .stack-8--channel-fields {
   gap: 8px;
 }
+/** Subtle “add row” control under email/phone stacks (not a full button). */
+.channel-field-add-link {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 450;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+.channel-field-add-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.channel-field-add-link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 3px rgba(201, 160, 106, 0.35);
+}
 .stack-8-row {
   display: flex;
   gap: 8px;

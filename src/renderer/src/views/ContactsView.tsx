@@ -785,14 +785,14 @@ function EmailsBlock({
         {editing && (
           <button
             type="button"
-            className="btn btn-ghost focus-ring align-start"
+            className="channel-field-add-link"
             onClick={() =>
               setDraft((d) =>
                 d ? { ...d, emails: [...(d.emails ?? []), { label: 'Work', value: '' }] } : d
               )
             }
           >
-            Add email
+            Add another email
           </button>
         )}
       </div>
@@ -875,14 +875,14 @@ function PhonesBlock({
         {editing && (
           <button
             type="button"
-            className="btn btn-ghost focus-ring align-start"
+            className="channel-field-add-link"
             onClick={() =>
               setDraft((d) =>
                 d ? { ...d, phones: [...(d.phones ?? []), { label: 'Mobile', value: '' }] } : d
               )
             }
           >
-            Add phone
+            Add another phone
           </button>
         )}
       </div>
