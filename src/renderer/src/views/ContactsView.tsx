@@ -162,11 +162,11 @@ export default function ContactsView(): React.ReactElement {
   return (
     <div className="split-view">
       <div className="list-column">
-        <div className="list-toolbar">
+        <div className="list-toolbar list-toolbar--search">
           <div className="search-wrap">
             <input
               className="search-input focus-ring"
-              placeholder="Search names, companies, titles…"
+              placeholder="Search names, companies, titles, industries…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search contacts"

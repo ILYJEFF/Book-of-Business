@@ -7,6 +7,7 @@ import { orderIndustriesForUi } from '../lib/industryTree'
 
 export default function CompaniesView(): React.ReactElement {
   const { companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
+  const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -25,6 +26,16 @@ export default function CompaniesView(): React.ReactElement {
     () => companies.find((c) => c.id === selectedId) ?? null,
     [companies, selectedId]
   )
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return companies
+    return companies.filter((c) => {
+      const ind = c.industryId ? industryPathLabel(industryMap, c.industryId) : ''
+      const blob = [c.name, c.website ?? '', c.notes ?? '', c.address ?? '', ind].join(' ').toLowerCase()
+      return blob.includes(q)
+    })
+  }, [companies, query, industryMap])
 
   const open = useCallback((c: Company) => {
     setSelectedId(c.id)
@@ -113,13 +124,22 @@ export default function CompaniesView(): React.ReactElement {
   return (
     <div className="split-view">
       <div className="list-column">
-        <div className="list-toolbar">
+        <div className="list-toolbar list-toolbar--search">
+          <div className="search-wrap">
+            <input
+              className="search-input focus-ring"
+              placeholder="Search company name, industry, site, notes…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search companies"
+            />
+          </div>
           <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
             New company
           </button>
         </div>
         <div className="scroll-y list-rows">
-          {companies.map((c) => {
+          {filtered.map((c) => {
             const on = c.id === selectedId && !creating
             return (
               <button
@@ -138,12 +158,18 @@ export default function CompaniesView(): React.ReactElement {
               </button>
             )
           })}
-          {companies.length === 0 && (
-            <div className="list-empty">
-              <p className="list-empty-title">No companies yet</p>
-              <p className="list-empty-text">Add orgs you work with, then tie them to people and sectors.</p>
-            </div>
-          )}
+          {filtered.length === 0 &&
+            (companies.length === 0 ? (
+              <div className="list-empty">
+                <p className="list-empty-title">No companies yet</p>
+                <p className="list-empty-text">Add orgs you work with, then tie them to people and sectors.</p>
+              </div>
+            ) : (
+              <div className="list-empty">
+                <p className="list-empty-title">No results</p>
+                <p className="list-empty-text">Nothing matches that search. Clear the field or try another term.</p>
+              </div>
+            ))}
         </div>
       </div>
 

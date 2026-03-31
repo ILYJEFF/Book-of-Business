@@ -1,4 +1,4 @@
-import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 
 interface Draft {
   address?: string
@@ -17,6 +17,29 @@ export default function AddressFields<T extends Draft>({
 }): React.ReactElement {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [latText, setLatText] = useState('')
+  const [lonText, setLonText] = useState('')
+  const latTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const lonTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => {
+    setLatText(
+      draft.latitude != null && Number.isFinite(draft.latitude) ? String(draft.latitude) : ''
+    )
+  }, [draft.latitude])
+
+  useEffect(() => {
+    setLonText(
+      draft.longitude != null && Number.isFinite(draft.longitude) ? String(draft.longitude) : ''
+    )
+  }, [draft.longitude])
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(latTimer.current)
+      clearTimeout(lonTimer.current)
+    }
+  }, [])
 
   const geocode = useCallback(async () => {
     const line = (draft.address ?? '').trim()
@@ -51,6 +74,42 @@ export default function AddressFields<T extends Draft>({
     Number.isFinite(draft.latitude) &&
     Number.isFinite(draft.longitude)
 
+  const parseCoord = (raw: string): number | undefined => {
+    const t = raw.trim()
+    if (t === '' || t === '-' || t === '.' || t === '-.') return undefined
+    if (/^-?\d+\.$/.test(t)) return undefined
+    const n = parseFloat(t)
+    return Number.isFinite(n) ? n : undefined
+  }
+
+  const pushLatToDraft = useCallback(
+    (text: string) => {
+      const t = text.trim()
+      const v = parseCoord(text)
+      setDraft((d) => {
+        if (!d) return d
+        if (t === '') return { ...d, latitude: undefined }
+        if (v !== undefined) return { ...d, latitude: v }
+        return d
+      })
+    },
+    [setDraft]
+  )
+
+  const pushLonToDraft = useCallback(
+    (text: string) => {
+      const t = text.trim()
+      const v = parseCoord(text)
+      setDraft((d) => {
+        if (!d) return d
+        if (t === '') return { ...d, longitude: undefined }
+        if (v !== undefined) return { ...d, longitude: v }
+        return d
+      })
+    },
+    [setDraft]
+  )
+
   return (
     <div>
       <label className="field-label" htmlFor="addr-line">
@@ -76,14 +135,78 @@ export default function AddressFields<T extends Draft>({
           )}
         </div>
       )}
+      {editing && (
+        <div className="form-row-2 address-pin-row">
+          <div>
+            <label className="field-label" htmlFor="addr-lat">
+              Latitude
+            </label>
+            <input
+              id="addr-lat"
+              type="text"
+              inputMode="decimal"
+              className="text-input focus-ring"
+              placeholder="e.g. 40.7128"
+              autoComplete="off"
+              value={latText}
+              onChange={(e) => {
+                if (!editing) return
+                const t = e.target.value
+                setLatText(t)
+                clearTimeout(latTimer.current)
+                latTimer.current = setTimeout(() => pushLatToDraft(t), 200)
+              }}
+              onBlur={() => {
+                clearTimeout(latTimer.current)
+                pushLatToDraft(latText)
+              }}
+            />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="addr-lon">
+              Longitude
+            </label>
+            <input
+              id="addr-lon"
+              type="text"
+              inputMode="decimal"
+              placeholder="e.g. -74.0060"
+              autoComplete="off"
+              className="text-input focus-ring"
+              value={lonText}
+              onChange={(e) => {
+                if (!editing) return
+                const t = e.target.value
+                setLonText(t)
+                clearTimeout(lonTimer.current)
+                lonTimer.current = setTimeout(() => pushLonToDraft(t), 200)
+              }}
+              onBlur={() => {
+                clearTimeout(lonTimer.current)
+                pushLonToDraft(lonText)
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {editing && (
+        <p className="muted small address-pin-hint">
+          Nudge the pin by editing degrees (WGS84). Use Place on map to fill from the address, then fine-tune here.
+        </p>
+      )}
       {err && (
         <p className="small" style={{ marginTop: 8, color: 'var(--danger)' }}>
           {err}
         </p>
       )}
-      {hasPin && (
+      {!editing && hasPin && (
         <p className="muted small" style={{ marginTop: 10, marginBottom: 0 }}>
-          Map: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
+          Map pin: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
+        </p>
+      )}
+      {editing && hasPin && (
+        <p className="muted small" style={{ marginTop: 8, marginBottom: 0 }}>
+          Pin set: {draft.latitude!.toFixed(5)}, {draft.longitude!.toFixed(5)}
         </p>
       )}
       {!editing && !hasPin && (draft.address ?? '').trim() && (
