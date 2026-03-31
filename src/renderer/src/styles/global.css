@@ -880,6 +880,120 @@ a:hover {
   color: var(--text-secondary);
 }
 
+/* Industry search (contacts) */
+.industry-search {
+  position: relative;
+}
+.industry-search-chips {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.industry-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 8px 6px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(201, 160, 106, 0.35);
+  background: rgba(201, 160, 106, 0.08);
+}
+.industry-search-chip-label {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+.industry-search-chip-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.12s var(--ease-out),
+    background 0.12s var(--ease-out);
+}
+.industry-search-chip-remove:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.2);
+}
+.industry-search-field {
+  margin-top: 2px;
+}
+.industry-search-input {
+  width: 100%;
+  padding: 10px 0 11px;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+.industry-search-input::placeholder {
+  color: var(--text-faint);
+}
+.industry-search-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent-line);
+}
+.industry-search-hint {
+  margin: 8px 0 0;
+}
+.industry-search-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-top: 4px;
+  max-height: 220px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-float);
+}
+.industry-search-empty {
+  padding: 10px 12px;
+}
+.industry-search-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.12s var(--ease-out);
+}
+.industry-search-hit:hover {
+  background: rgba(255, 250, 240, 0.06);
+  color: var(--text-primary);
+}
+
 /* Alerts & empty */
 .empty-state {
   padding: 48px 40px;

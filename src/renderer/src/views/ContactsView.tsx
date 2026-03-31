@@ -3,8 +3,8 @@ import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
+import IndustrySearchPick from '../components/IndustrySearchPick'
 import { contactDisplayName, companyById, industryPathLabel, initials } from '../lib/format'
-import { orderIndustriesForUi } from '../lib/industryTree'
 
 function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
   return {
@@ -39,11 +39,6 @@ export default function ContactsView(): React.ReactElement {
   )
   const industryMap = useMemo(
     () => new Map(industries.map((i) => [i.id, i] as const)),
-    [industries]
-  )
-
-  const industriesOrdered = useMemo(
-    () => orderIndustriesForUi(industries).map((x) => x.industry),
     [industries]
   )
 
@@ -385,20 +380,28 @@ export default function ContactsView(): React.ReactElement {
                 }}
               />
 
-              <MultiPick
+              <IndustrySearchPick
                 label="Industries"
-                empty="Add industries in the Industries tab first."
-                options={industriesOrdered}
-                getOptionLabel={(o) => industryPathLabel(industryMap, (o as Industry).id)}
+                emptyLibrary="Add industries in the Industries tab first."
+                industries={industries}
+                industryMap={industryMap}
                 selectedIds={displayDraft.industryIds ?? []}
                 disabled={!editing}
-                onToggle={(id, on) => {
+                onAdd={(id) => {
                   if (!editing) return
                   setDraft((d) => {
                     if (!d) return d
                     const cur = new Set(d.industryIds ?? [])
-                    if (on) cur.add(id)
-                    else cur.delete(id)
+                    cur.add(id)
+                    return { ...d, industryIds: [...cur] }
+                  })
+                }}
+                onRemove={(id) => {
+                  if (!editing) return
+                  setDraft((d) => {
+                    if (!d) return d
+                    const cur = new Set(d.industryIds ?? [])
+                    cur.delete(id)
                     return { ...d, industryIds: [...cur] }
                   })
                 }}
