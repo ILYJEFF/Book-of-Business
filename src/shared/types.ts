@@ -19,6 +19,7 @@ export interface Company {
   id: string
   name: string
   website?: string
+  linkedinUrl?: string
   industryId?: string
   notes?: string
   /** Logo or image: `data:` URL from the app, or a remote `https:` URL. */

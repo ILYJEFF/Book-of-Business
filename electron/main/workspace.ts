@@ -238,10 +238,21 @@ export function saveCompany(
     photoUrl = existing?.photoUrl
   }
 
+  let linkedinUrl: string | undefined
+  if (Object.hasOwn(input as object, 'linkedinUrl')) {
+    linkedinUrl =
+      typeof input.linkedinUrl === 'string' && input.linkedinUrl.trim()
+        ? input.linkedinUrl.trim()
+        : undefined
+  } else {
+    linkedinUrl = existing?.linkedinUrl
+  }
+
   const row: Company = {
     id,
     name: input.name.trim(),
     website: input.website?.trim() || undefined,
+    linkedinUrl,
     industryId: input.industryId || undefined,
     notes: input.notes?.trim() || undefined,
     photoUrl,

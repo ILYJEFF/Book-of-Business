@@ -19,15 +19,37 @@ export function contactDisplayName(c: Contact): string {
   return t || 'Unnamed contact'
 }
 
-/** Safe https URL for opening in the browser, or null if missing or not a LinkedIn host. */
-export function contactLinkedInOpenUrl(c: Pick<Contact, 'linkedinUrl'>): string | null {
-  const raw = c.linkedinUrl?.trim()
+/** Safe URL for opening a LinkedIn company or profile link in the browser. */
+export function safeLinkedInOpenUrl(linkedinUrl?: string | null): string | null {
+  const raw = linkedinUrl?.trim()
   if (!raw) return null
   try {
     const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
     const host = u.hostname.replace(/^www\./i, '').toLowerCase()
     if (host !== 'linkedin.com' && !host.endsWith('.linkedin.com')) return null
+    return u.href
+  } catch {
+    return null
+  }
+}
+
+export function contactLinkedInOpenUrl(c: Pick<Contact, 'linkedinUrl'>): string | null {
+  return safeLinkedInOpenUrl(c.linkedinUrl)
+}
+
+export function companyLinkedInOpenUrl(c: Pick<Company, 'linkedinUrl'>): string | null {
+  return safeLinkedInOpenUrl(c.linkedinUrl)
+}
+
+/** Safe http(s) website URL for opening externally (not javascript:, data:, etc.). */
+export function safeWebsiteOpenUrl(website?: string | null): string | null {
+  const raw = website?.trim()
+  if (!raw) return null
+  try {
+    const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
+    if (!u.hostname) return null
     return u.href
   } catch {
     return null

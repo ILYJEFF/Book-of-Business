@@ -4,9 +4,11 @@ import AddressFields from '../components/AddressFields'
 import CompanyAvatar from '../components/CompanyAvatar'
 import CompanyFilterPanel from '../components/CompanyFilterPanel'
 import IndustrySearchPick from '../components/IndustrySearchPick'
+import LinkedInGlyph from '../components/LinkedInGlyph'
+import WebsiteGlyph from '../components/WebsiteGlyph'
 import { useApp } from '../context/AppContext'
 import { useWorkspacePhotoUrl } from '../hooks/useWorkspacePhotoUrl'
-import { industryPathLabel } from '../lib/format'
+import { companyLinkedInOpenUrl, industryPathLabel, safeWebsiteOpenUrl } from '../lib/format'
 import { companyPassesFilters, createDefaultCompanyFilters } from '../lib/recordFilters'
 
 export default function CompaniesView(): React.ReactElement {
@@ -61,7 +63,7 @@ export default function CompaniesView(): React.ReactElement {
     setCreating(true)
     setEditing(true)
     resetPhotoFieldUi()
-    setDraft({ name: '', website: '', industryId: '', notes: '', address: '' })
+    setDraft({ name: '', website: '', linkedinUrl: '', industryId: '', notes: '', address: '' })
     setConfirmDelete(false)
   }, [resetPhotoFieldUi])
 
@@ -75,6 +77,7 @@ export default function CompaniesView(): React.ReactElement {
       setDraft({
         name: '',
         website: '',
+        linkedinUrl: '',
         industryId: '',
         notes: '',
         address: (p.address ?? '').trim() || '',
@@ -143,6 +146,26 @@ export default function CompaniesView(): React.ReactElement {
 
   const display = editing && draft ? draft : selected
 
+  const companyLiOpenUrl = useMemo(() => {
+    if (!display) return null
+    return companyLinkedInOpenUrl(display as Company)
+  }, [display])
+
+  const companyWebOpenUrl = useMemo(() => {
+    if (!display) return null
+    return safeWebsiteOpenUrl((display as Company).website)
+  }, [display])
+
+  const openCompanyLinkedIn = useCallback(() => {
+    if (!companyLiOpenUrl) return
+    void window.book.openExternal(companyLiOpenUrl)
+  }, [companyLiOpenUrl])
+
+  const openCompanyWebsite = useCallback(() => {
+    if (!companyWebOpenUrl) return
+    void window.book.openExternal(companyWebOpenUrl)
+  }, [companyWebOpenUrl])
+
   useEffect(() => {
     if (!openRecordRequest) return
     if (openRecordRequest.kind !== 'company') {
@@ -171,21 +194,68 @@ export default function CompaniesView(): React.ReactElement {
         <div className="scroll-y list-rows">
           {filtered.map((c) => {
             const on = c.id === selectedId && !creating
+            const rowLi = companyLinkedInOpenUrl(c)
+            const rowWeb = safeWebsiteOpenUrl(c.website)
             return (
-              <button
+              <div
                 key={c.id}
-                type="button"
-                onClick={() => open(c)}
+                role="button"
+                tabIndex={0}
                 className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
+                onClick={() => open(c)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    open(c)
+                  }
+                }}
               >
                 <CompanyAvatar company={c} size="sm" />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="list-row-title">{c.name}</div>
+                <div className="list-row-main">
+                  <div className="list-row-title-line">
+                    <span className="list-row-title">{c.name}</span>
+                    {rowLi || rowWeb ? (
+                      <span className="list-row-link-cluster">
+                        {rowLi ? (
+                          <button
+                            type="button"
+                            className="list-row-linkedin-emblem focus-ring"
+                            aria-label={`Open ${c.name} on LinkedIn`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void window.book.openExternal(rowLi)
+                            }}
+                            onKeyDown={(e) => {
+                              e.stopPropagation()
+                            }}
+                          >
+                            <LinkedInGlyph className="list-row-linkedin-emblem-icon" />
+                          </button>
+                        ) : null}
+                        {rowWeb ? (
+                          <button
+                            type="button"
+                            className="list-row-website-emblem focus-ring"
+                            aria-label={`Open website for ${c.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void window.book.openExternal(rowWeb)
+                            }}
+                            onKeyDown={(e) => {
+                              e.stopPropagation()
+                            }}
+                          >
+                            <WebsiteGlyph className="list-row-website-emblem-icon" />
+                          </button>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="list-row-sub">
                     {c.industryId ? industryPathLabel(industryMap, c.industryId) : 'No industry linked'}
                   </div>
                 </div>
-              </button>
+              </div>
             )
           })}
           {filtered.length === 0 &&
@@ -233,6 +303,26 @@ export default function CompaniesView(): React.ReactElement {
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
                       Edit
                     </button>
+                    {companyLiOpenUrl ? (
+                      <button
+                        type="button"
+                        className="btn-profile-linkedin btn-profile-linkedin--icon-only focus-ring"
+                        aria-label="Open LinkedIn in browser"
+                        onClick={() => void openCompanyLinkedIn()}
+                      >
+                        <LinkedInGlyph className="btn-profile-linkedin-icon" />
+                      </button>
+                    ) : null}
+                    {companyWebOpenUrl ? (
+                      <button
+                        type="button"
+                        className="btn-profile-website focus-ring"
+                        aria-label="Open website in browser"
+                        onClick={() => void openCompanyWebsite()}
+                      >
+                        <WebsiteGlyph className="btn-profile-website-icon" />
+                      </button>
+                    ) : null}
                     <button type="button" className="btn btn-danger focus-ring" onClick={() => setConfirmDelete(true)}>
                       Delete
                     </button>
@@ -242,6 +332,28 @@ export default function CompaniesView(): React.ReactElement {
                     <button type="button" className="btn btn-ghost focus-ring" onClick={cancelEdit} disabled={saving}>
                       Cancel
                     </button>
+                    {companyLiOpenUrl ? (
+                      <button
+                        type="button"
+                        className="btn-profile-linkedin btn-profile-linkedin--icon-only focus-ring"
+                        aria-label="Open LinkedIn in browser"
+                        onClick={() => void openCompanyLinkedIn()}
+                        disabled={saving}
+                      >
+                        <LinkedInGlyph className="btn-profile-linkedin-icon" />
+                      </button>
+                    ) : null}
+                    {companyWebOpenUrl ? (
+                      <button
+                        type="button"
+                        className="btn-profile-website focus-ring"
+                        aria-label="Open website in browser"
+                        onClick={() => void openCompanyWebsite()}
+                        disabled={saving}
+                      >
+                        <WebsiteGlyph className="btn-profile-website-icon" />
+                      </button>
+                    ) : null}
                     <button type="button" className="btn btn-primary focus-ring" onClick={() => void save()} disabled={saving}>
                       {saving ? 'Saving…' : 'Save'}
                     </button>
@@ -384,18 +496,33 @@ export default function CompaniesView(): React.ReactElement {
                   onChange={(e) => editing && setDraft((d) => (d ? { ...d, name: e.target.value } : d))}
                 />
               </div>
-              <div>
-                <label className="field-label" htmlFor="co-web">
-                  Website
-                </label>
-                <input
-                  id="co-web"
-                  className="text-input focus-ring"
-                  disabled={!editing}
-                  placeholder="https://"
-                  value={display.website ?? ''}
-                  onChange={(e) => editing && setDraft((d) => (d ? { ...d, website: e.target.value } : d))}
-                />
+              <div className="form-row-2">
+                <div>
+                  <label className="field-label" htmlFor="co-li">
+                    LinkedIn
+                  </label>
+                  <input
+                    id="co-li"
+                    className="text-input focus-ring"
+                    disabled={!editing}
+                    placeholder="https://linkedin.com/company/…"
+                    value={display.linkedinUrl ?? ''}
+                    onChange={(e) => editing && setDraft((d) => (d ? { ...d, linkedinUrl: e.target.value } : d))}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="co-web">
+                    Website
+                  </label>
+                  <input
+                    id="co-web"
+                    className="text-input focus-ring"
+                    disabled={!editing}
+                    placeholder="https://"
+                    value={display.website ?? ''}
+                    onChange={(e) => editing && setDraft((d) => (d ? { ...d, website: e.target.value } : d))}
+                  />
+                </div>
               </div>
               <IndustrySearchPick
                 label="Industry"
