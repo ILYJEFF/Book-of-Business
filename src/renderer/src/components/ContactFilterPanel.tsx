@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type Dispatch, type ReactElement, type SetStateAction } from 'react'
-import type { Company, Industry } from '../../../shared/types'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactElement, type SetStateAction } from 'react'
+import type { Company, Industry, Tag } from '../../../shared/types'
 import {
   activeContactFilterCount,
   CONTACT_CATEGORIES,
@@ -9,6 +9,13 @@ import {
 } from '../lib/recordFilters'
 import { industryPathLabel } from '../lib/format'
 import { orderIndustriesForUi } from '../lib/industryTree'
+import FilterCombobox from './FilterCombobox'
+
+const MAP_PIN_CHOICES: { id: ContactFilterModel['mapPin']; label: string }[] = [
+  { id: 'any', label: 'Any' },
+  { id: 'mapped', label: 'On the map' },
+  { id: 'unmapped', label: 'No pin' }
+]
 
 export default function ContactFilterPanel({
   filters,
@@ -16,6 +23,7 @@ export default function ContactFilterPanel({
   companies,
   industries,
   industryMap,
+  tags,
   total,
   shown,
   onNew
@@ -25,11 +33,13 @@ export default function ContactFilterPanel({
   companies: Company[]
   industries: Industry[]
   industryMap: Map<string, Industry>
+  tags: Tag[]
   total: number
   shown: number
   onNew: () => void
 }): ReactElement {
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [tagQuery, setTagQuery] = useState('')
   const prevFacets = useRef(0)
   const active = activeContactFilterCount(filters)
   const facetCount = facetContactFilterCount(filters)
@@ -40,12 +50,46 @@ export default function ContactFilterPanel({
     prevFacets.current = facetCount
   }, [facetCount])
 
+  const tagsSorted = useMemo(() => [...tags].sort((a, b) => a.name.localeCompare(b.name)), [tags])
+  const tagNeedle = tagQuery.trim().toLowerCase()
+  const tagsForUi = useMemo(
+    () =>
+      tagNeedle ? tagsSorted.filter((t) => t.name.toLowerCase().includes(tagNeedle)) : tagsSorted,
+    [tagsSorted, tagNeedle]
+  )
+
+  const companyOptions = useMemo(
+    () =>
+      [...companies]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((c) => ({ id: c.id, label: c.name })),
+    [companies]
+  )
+
+  const industryOptions = useMemo(
+    () =>
+      industriesOrdered.map(({ industry: i }) => ({
+        id: i.id,
+        label: industryPathLabel(industryMap, i.id)
+      })),
+    [industriesOrdered, industryMap]
+  )
+
   const toggleCategory = (id: (typeof CONTACT_CATEGORIES)[0]['id']) => {
     setFilters((f) => {
       const next = new Set(f.categories)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return { ...f, categories: next }
+    })
+  }
+
+  const toggleTagFilter = (id: string) => {
+    setFilters((f) => {
+      const next = new Set(f.tagIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { ...f, tagIds: next }
     })
   }
 
@@ -84,10 +128,13 @@ export default function ContactFilterPanel({
       </button>
 
       {advancedOpen && (
-        <div className="filter-advanced scroll-y">
-          <div className="filter-section">
-            <span className="filter-section-label">Relationship</span>
-            <div className="filter-chip-row" role="group" aria-label="Filter by relationship">
+        <div className="filter-advanced">
+          <div className="filter-refine-card">
+            <div className="filter-refine-card-head">
+              <span className="filter-refine-kicker">Relationship</span>
+              <p className="filter-refine-help">Match any chosen type. None selected means all.</p>
+            </div>
+            <div className="filter-chip-row filter-chip-row--comfort" role="group" aria-label="Filter by relationship">
               {CONTACT_CATEGORIES.map(({ id, label }) => {
                 const on = filters.categories.has(id)
                 return (
@@ -102,81 +149,104 @@ export default function ContactFilterPanel({
                 )
               })}
             </div>
-            <p className="filter-hint muted small">Leave all off to include every relationship.</p>
           </div>
 
-          <div className="filter-grid-2">
-            <div>
-              <label className="filter-section-label" htmlFor="flt-co">
-                Linked company
-              </label>
-              <select
-                id="flt-co"
-                className="select-input focus-ring filter-select"
-                value={filters.companyId}
-                onChange={(e) => setFilters((f) => ({ ...f, companyId: e.target.value }))}
-              >
-                <option value="">Any company</option>
-                {[...companies].sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+          <div className="filter-refine-card">
+            <div className="filter-refine-card-head">
+              <span className="filter-refine-kicker">Tags</span>
+              <p className="filter-refine-help">Match any selected tag. Add tags from the sidebar or a contact card.</p>
             </div>
-            <div>
-              <label className="filter-section-label" htmlFor="flt-ind">
-                Linked industry
-              </label>
-              <select
-                id="flt-ind"
-                className="select-input focus-ring filter-select"
-                value={filters.industryId}
-                onChange={(e) => setFilters((f) => ({ ...f, industryId: e.target.value }))}
-              >
-                <option value="">Any industry</option>
-                {industriesOrdered.map(({ industry: i }) => (
-                  <option key={i.id} value={i.id}>
-                    {industryPathLabel(industryMap, i.id)}
-                  </option>
-                ))}
-              </select>
+            {tagsSorted.length === 0 ? (
+              <p className="filter-refine-empty muted small">No tags yet.</p>
+            ) : (
+              <>
+                <div className="search-wrap filter-tag-search-wrap">
+                  <input
+                    type="search"
+                    className="search-input search-input--filter focus-ring"
+                    placeholder="Search tags…"
+                    value={tagQuery}
+                    onChange={(e) => setTagQuery(e.target.value)}
+                    aria-label="Search tags to filter"
+                  />
+                </div>
+                <div className="filter-chip-scroll scroll-y" role="group" aria-label="Filter by tags">
+                  <div className="filter-chip-row filter-chip-row--comfort">
+                    {tagsForUi.map((t) => {
+                      const on = filters.tagIds.has(t.id)
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={`filter-chip focus-ring${on ? ' filter-chip--on' : ''}`}
+                          onClick={() => toggleTagFilter(t.id)}
+                        >
+                          {t.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                {tagNeedle && tagsForUi.length === 0 ? (
+                  <p className="filter-refine-empty muted small">No tag names match.</p>
+                ) : null}
+              </>
+            )}
+          </div>
+
+          <div className="filter-refine-card filter-refine-card--duo">
+            <FilterCombobox
+              id="flt-co"
+              listboxId="flt-co-listbox"
+              label="Linked company"
+              placeholder="Search companies…"
+              value={filters.companyId}
+              onChange={(companyId) => setFilters((f) => ({ ...f, companyId }))}
+              options={companyOptions}
+            />
+            <FilterCombobox
+              id="flt-ind"
+              listboxId="flt-ind-listbox"
+              label="Linked industry"
+              placeholder="Search industries…"
+              value={filters.industryId}
+              onChange={(industryId) => setFilters((f) => ({ ...f, industryId }))}
+              options={industryOptions}
+              typeaheadThreshold={12}
+            />
+          </div>
+
+          <div className="filter-refine-card">
+            <div className="filter-refine-card-head">
+              <span className="filter-refine-kicker">Map pin</span>
+              <p className="filter-refine-help">Filter by whether an address is on the map.</p>
+            </div>
+            <div className="filter-chip-row filter-chip-row--comfort" role="group" aria-label="Filter by map pin">
+              {MAP_PIN_CHOICES.map(({ id, label }) => {
+                const on = filters.mapPin === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`filter-chip focus-ring${on ? ' filter-chip--on' : ''}`}
+                    onClick={() => setFilters((f) => ({ ...f, mapPin: id }))}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          <div className="filter-grid-2">
-            <div>
-              <label className="filter-section-label" htmlFor="flt-map">
-                Map pin
-              </label>
-              <select
-                id="flt-map"
-                className="select-input focus-ring filter-select"
-                value={filters.mapPin}
-                onChange={(e) =>
-                  setFilters((f) => ({
-                    ...f,
-                    mapPin: e.target.value as ContactFilterModel['mapPin']
-                  }))
-                }
-              >
-                <option value="any">Any</option>
-                <option value="mapped">On the map</option>
-                <option value="unmapped">Not on the map</option>
-              </select>
-            </div>
-            <div className="filter-actions-col">
-              {active > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-ghost focus-ring btn-block filter-clear-btn"
-                  onClick={() => setFilters(createDefaultContactFilters())}
-                >
-                  Clear all ({active})
-                </button>
-              )}
-            </div>
-          </div>
+          {active > 0 ? (
+            <button
+              type="button"
+              className="btn btn-ghost focus-ring btn-block filter-clear-btn"
+              onClick={() => setFilters(createDefaultContactFilters())}
+            >
+              Clear all filters ({active})
+            </button>
+          ) : null}
         </div>
       )}
     </div>
