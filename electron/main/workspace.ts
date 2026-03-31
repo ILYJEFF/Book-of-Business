@@ -247,7 +247,9 @@ export function saveCompany(
 
 export function saveContact(
   root: string,
-  input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] }
+  input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] },
+  /** Prefer this value (string or null to clear); avoids IPC losing nested fields on some builds. */
+  departmentFromChannel?: unknown
 ): Contact {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
@@ -256,12 +258,16 @@ export function saveContact(
       ? (JSON.parse(readFileSync(join(root, 'contacts', `${input.id}.json`), 'utf-8')) as Contact)
       : null
   const coords = optLatLon(input.latitude, input.longitude)
+  const deptRaw =
+    departmentFromChannel !== undefined
+      ? departmentFromChannel
+      : (input as Record<string, unknown>)['department']
   const row: Contact = {
     id,
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
     title: input.title?.trim() || undefined,
-    department: optDepartment((input as Record<string, unknown>)['department']),
+    department: optDepartment(deptRaw),
     category: input.category,
     emails: Array.isArray(input.emails) ? input.emails.map((e) => e.trim()).filter(Boolean) : [],
     phones: Array.isArray(input.phones)

@@ -110,19 +110,22 @@ export default function ContactsView(): React.ReactElement {
     try {
       const emails = (draft.emails ?? []).map((e) => e.trim()).filter(Boolean)
       const deptRaw = draft.department
-      const department: string | undefined =
-        deptRaw != null && String(deptRaw).trim() ? String(deptRaw).trim() : undefined
-      const saved = await window.book.saveContact({
-        ...draft,
-        firstName: first || 'Unknown',
-        lastName: last || '',
-        category: draft.category ?? 'work',
-        emails,
-        phones: (draft.phones ?? []).filter((p) => p.value?.trim()),
-        companyIds: draft.companyIds ?? [],
-        industryIds: draft.industryIds ?? [],
-        department
-      })
+      const departmentField: string | null =
+        deptRaw != null && String(deptRaw).trim() ? String(deptRaw).trim() : null
+      const { department: _omitDept, ...draftRest } = draft
+      const saved = await window.book.saveContact(
+        {
+          ...draftRest,
+          firstName: first || 'Unknown',
+          lastName: last || '',
+          category: draft.category ?? 'work',
+          emails,
+          phones: (draft.phones ?? []).filter((p) => p.value?.trim()),
+          companyIds: draft.companyIds ?? [],
+          industryIds: draft.industryIds ?? []
+        },
+        departmentField
+      )
       await refresh({ background: true })
       setSelectedId(saved.id)
       setDraft({ ...saved })

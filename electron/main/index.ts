@@ -115,10 +115,14 @@ app.whenReady().then(() => {
     if (!root) throw new Error('No workspace')
     return saveCompany(root, payload as Parameters<typeof saveCompany>[1])
   })
-  ipcMain.handle('data:saveContact', (_e, payload: unknown) => {
+  ipcMain.handle('data:saveContact', (_e, payload: unknown, department: unknown) => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
-    return saveContact(root, payload as Parameters<typeof saveContact>[1])
+    return saveContact(
+      root,
+      payload as Parameters<typeof saveContact>[1],
+      department
+    )
   })
   ipcMain.handle('data:updateContactPin', (_e, id: string, lat: number, lon: number) => {
     const root = needRoot()

@@ -16,7 +16,9 @@ export interface BookAPI {
       firstName: string
       lastName: string
       category: Contact['category']
-    }
+    },
+    /** string = value, null = clear; passed separately so IPC always carries it */
+    department: string | null
   ) => Promise<Contact>
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
@@ -36,7 +38,7 @@ const api: BookAPI = {
   listContacts: () => ipcRenderer.invoke('data:listContacts'),
   saveIndustry: (payload) => ipcRenderer.invoke('data:saveIndustry', payload),
   saveCompany: (payload) => ipcRenderer.invoke('data:saveCompany', payload),
-  saveContact: (payload) => ipcRenderer.invoke('data:saveContact', payload),
+  saveContact: (payload, department) => ipcRenderer.invoke('data:saveContact', payload, department),
   deleteIndustry: (id) => ipcRenderer.invoke('data:deleteIndustry', id),
   deleteCompany: (id) => ipcRenderer.invoke('data:deleteCompany', id),
   deleteContact: (id) => ipcRenderer.invoke('data:deleteContact', id),

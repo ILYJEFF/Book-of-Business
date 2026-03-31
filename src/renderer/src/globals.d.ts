@@ -15,7 +15,8 @@ export interface BookBridge {
       firstName: string
       lastName: string
       category: Contact['category']
-    }
+    },
+    department: string | null
   ) => Promise<Contact>
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
