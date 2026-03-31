@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
 import ContactAvatar from '../components/ContactAvatar'
-import ContactFilterPanel, { ContactRefineSheet } from '../components/ContactFilterPanel'
+import ContactFilterPanel, { ContactFiltersRail } from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
 import LinkedInGlyph from '../components/LinkedInGlyph'
@@ -91,7 +91,6 @@ export default function ContactsView(): React.ReactElement {
   const [favBusyId, setFavBusyId] = useState<string | null>(null)
   const [newTagName, setNewTagName] = useState('')
   const [tagCreateBusy, setTagCreateBusy] = useState(false)
-  const [contactRefineOpen, setContactRefineOpen] = useState(false)
 
   const selected = useMemo(
     () => contacts.find((c) => c.id === selectedId) ?? null,
@@ -347,20 +346,9 @@ export default function ContactsView(): React.ReactElement {
               total={contacts.length}
               shown={filtered.length}
               onNew={startCreate}
-              onOpenRefine={() => setContactRefineOpen(true)}
             />
           </div>
           <div className="list-main">
-            <ContactRefineSheet
-              open={contactRefineOpen}
-              onClose={() => setContactRefineOpen(false)}
-              filters={filters}
-              setFilters={setFilters}
-              companies={companies}
-              industries={industries}
-              industryMap={industryMap}
-              tags={tags}
-            />
             <div className="scroll-y list-rows">
               {filtered.map((c) => {
                 const on = c.id === selectedId && !creating
@@ -438,23 +426,24 @@ export default function ContactsView(): React.ReactElement {
         </div>
       </div>
 
-      <div className="scroll-y detail-column">
-        {!displayDraft && !creating && (
-          <div className="empty-canvas">
-            <p className="folio-kicker">Contacts</p>
-            <div className="empty-canvas-rule" aria-hidden />
-            <h2 className="empty-canvas-title">No row selected</h2>
-            <p className="empty-canvas-text">Pick someone from the list or create a contact. One JSON file per person in your library folder.</p>
-            <div className="empty-canvas-actions">
-              <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
-                New contact
-              </button>
-              <span className="empty-canvas-hint">Writes to disk when you save</span>
+      <div className="detail-split">
+        <div className="scroll-y detail-column">
+          {!displayDraft && !creating && (
+            <div className="empty-canvas">
+              <p className="folio-kicker">Contacts</p>
+              <div className="empty-canvas-rule" aria-hidden />
+              <h2 className="empty-canvas-title">No row selected</h2>
+              <p className="empty-canvas-text">Pick someone from the list or create a contact. One JSON file per person in your library folder.</p>
+              <div className="empty-canvas-actions">
+                <button type="button" className="btn btn-primary focus-ring" onClick={startCreate}>
+                  New contact
+                </button>
+                <span className="empty-canvas-hint">Writes to disk when you save</span>
+              </div>
             </div>
-          </div>
-        )}
-        {displayDraft && (
-          <div className="detail-inner">
+          )}
+          {displayDraft && (
+            <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
                 <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="xl" />
@@ -959,8 +948,21 @@ export default function ContactsView(): React.ReactElement {
                 </div>
               </footer>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+        <aside className="contact-filters-rail" aria-label="Contact list filters">
+          <ContactFiltersRail
+            filters={filters}
+            setFilters={setFilters}
+            companies={companies}
+            industries={industries}
+            industryMap={industryMap}
+            tags={tags}
+            shown={filtered.length}
+            total={contacts.length}
+          />
+        </aside>
       </div>
     </div>
   )
