@@ -1,9 +1,13 @@
 /**
- * Resolve a LinkedIn profile photo URL from the public /in/ page meta tags.
- * LinkedIn does not offer a supported public API for this; the HTML preview
- * often includes og:image pointing at media.licdn.com. May fail for private
- * profiles, rate limits, or HTML changes.
+ * Resolve a LinkedIn profile headshot URL for a public /in/ profile.
+ *
+ * 1) Microlink API (https://microlink.io) reads the page and returns og:image.
+ *    Your profile URL is sent to their service (see their privacy policy).
+ * 2) Fallback: fetch HTML in-app via Electron net.fetch (Chromium stack), then global fetch,
+ *    and parse og:image tags.
  */
+
+import { net } from 'electron'
 
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
@@ -53,7 +57,6 @@ function isLikelyProfilePhotoUrl(url: string): boolean {
   }
 }
 
-/** Collect og:image and og:image:secure_url values; prefer a licdn profile headshot. */
 function extractBestProfileImage(html: string): string | null {
   const max = Math.min(html.length, 1_200_000)
   const chunk = html.slice(0, max)
@@ -78,20 +81,57 @@ function extractBestProfileImage(html: string): string | null {
   return null
 }
 
-export async function fetchLinkedInProfilePhotoUrl(linkedinUrl: string): Promise<string | null> {
-  const profile = normalizeLinkedInProfileUrl(linkedinUrl)
-  if (!profile) return null
+async function fetchWithNetOrGlobal(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await net.fetch(url, init)
+  } catch {
+    return globalThis.fetch(url, init)
+  }
+}
+
+/** Microlink resolves Open Graph metadata without running a full browser. */
+async function fetchPhotoViaMicrolink(profileUrl: string): Promise<string | null> {
+  const api = new URL('https://api.microlink.io/')
+  api.searchParams.set('url', profileUrl)
 
   let res: Response
   try {
-    res = await fetch(profile, {
+    res = await globalThis.fetch(api.toString(), {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(28_000)
+    })
+  } catch {
+    return null
+  }
+
+  if (!res.ok) return null
+
+  let body: unknown
+  try {
+    body = await res.json()
+  } catch {
+    return null
+  }
+
+  const row = body as { status?: string; data?: { image?: { url?: string } } }
+  if (row.status !== 'success') return null
+  const url = row.data?.image?.url?.trim()
+  if (!url) return null
+  if (!isLikelyProfilePhotoUrl(url)) return null
+  return url
+}
+
+async function fetchPhotoViaHtmlScrape(profileUrl: string): Promise<string | null> {
+  let res: Response
+  try {
+    res = await fetchWithNetOrGlobal(profileUrl, {
       headers: {
         'User-Agent': BROWSER_UA,
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9'
       },
       redirect: 'follow',
-      signal: AbortSignal.timeout(18_000)
+      signal: AbortSignal.timeout(22_000)
     })
   } catch {
     return null
@@ -106,6 +146,15 @@ export async function fetchLinkedInProfilePhotoUrl(linkedinUrl: string): Promise
     return null
   }
 
-  const og = extractBestProfileImage(html)
-  return og ?? null
+  return extractBestProfileImage(html)
+}
+
+export async function fetchLinkedInProfilePhotoUrl(linkedinUrl: string): Promise<string | null> {
+  const profile = normalizeLinkedInProfileUrl(linkedinUrl)
+  if (!profile) return null
+
+  const fromMicrolink = await fetchPhotoViaMicrolink(profile)
+  if (fromMicrolink) return fromMicrolink
+
+  return fetchPhotoViaHtmlScrape(profile)
 }

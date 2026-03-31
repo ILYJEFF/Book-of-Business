@@ -36,6 +36,7 @@ export default function ContactsView(): React.ReactElement {
   const [draft, setDraft] = useState<Partial<Contact> | null>(null)
   const [saving, setSaving] = useState(false)
   const [photoRefreshing, setPhotoRefreshing] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const companyMap = useMemo(
@@ -144,10 +145,20 @@ export default function ContactsView(): React.ReactElement {
     const li = draft?.linkedinUrl?.trim()
     if (!id || !li) return
     setPhotoRefreshing(true)
+    setPhotoError(null)
     try {
       const updated = await window.book.refreshContactLinkedinPhoto(id)
       await refresh({ background: true })
-      if (updated) setDraft({ ...updated })
+      if (updated) {
+        setDraft({ ...updated })
+        if (!updated.photoUrl?.trim()) {
+          setPhotoError(
+            'No photo was found. Use a standard profile link (linkedin.com/in/…). Very private profiles may not expose a preview image.'
+          )
+        }
+      }
+    } catch {
+      setPhotoError('Photo request failed. Check your network and try again.')
     } finally {
       setPhotoRefreshing(false)
     }
@@ -427,19 +438,27 @@ export default function ContactsView(): React.ReactElement {
                   {editing && (
                     <div className="linkedin-photo-hint muted small" style={{ marginTop: 6, marginBottom: 0 }}>
                       <p style={{ margin: '0 0 8px' }}>
-                        After you save, we try to load the photo from LinkedIn’s public preview page. If it did not appear,
-                        use the button below (saved contacts only).
+                        Photos load through a metadata service (Microlink) plus a direct fallback, because LinkedIn blocks
+                        most automated requests. Your profile URL is sent to Microlink when fetching. Saved contacts only
+                        for the button; new contacts get a photo on first save.
                       </p>
                       {(displayDraft as Contact).id && (displayDraft as Contact).linkedinUrl?.trim() && (
-                        <button
-                          type="button"
-                          className="btn btn-ghost focus-ring"
-                          style={{ padding: '5px 10px', fontSize: 12 }}
-                          disabled={saving || photoRefreshing}
-                          onClick={() => void refreshLinkedinPhoto()}
-                        >
-                          {photoRefreshing ? 'Fetching…' : 'Fetch LinkedIn photo now'}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-ghost focus-ring"
+                            style={{ padding: '5px 10px', fontSize: 12 }}
+                            disabled={saving || photoRefreshing}
+                            onClick={() => void refreshLinkedinPhoto()}
+                          >
+                            {photoRefreshing ? 'Fetching…' : 'Fetch LinkedIn photo now'}
+                          </button>
+                          {photoError && (
+                            <p className="small" style={{ margin: '8px 0 0', color: 'var(--danger)' }}>
+                              {photoError}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
