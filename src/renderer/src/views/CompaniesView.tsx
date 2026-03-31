@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company } from '../../../shared/types'
 import AddressFields from '../components/AddressFields'
 import CompanyFilterPanel from '../components/CompanyFilterPanel'
+import IndustrySearchPick from '../components/IndustrySearchPick'
 import { useApp } from '../context/AppContext'
 import { industryPathLabel } from '../lib/format'
-import { orderIndustriesForUi } from '../lib/industryTree'
 import { companyPassesFilters, createDefaultCompanyFilters } from '../lib/recordFilters'
 
 export default function CompaniesView(): React.ReactElement {
@@ -21,8 +21,6 @@ export default function CompaniesView(): React.ReactElement {
     () => new Map(industries.map((i) => [i.id, i] as const)),
     [industries]
   )
-
-  const industriesOrdered = useMemo(() => orderIndustriesForUi(industries), [industries])
 
   const selected = useMemo(
     () => companies.find((c) => c.id === selectedId) ?? null,
@@ -257,30 +255,27 @@ export default function CompaniesView(): React.ReactElement {
                   onChange={(e) => editing && setDraft((d) => (d ? { ...d, website: e.target.value } : d))}
                 />
               </div>
-              <div>
-                <label className="field-label" htmlFor="co-ind">
-                  Industry
-                </label>
-                <select
-                  id="co-ind"
-                  className="select-input focus-ring"
-                  disabled={!editing}
-                  value={display.industryId ?? ''}
-                  onChange={(e) =>
-                    editing &&
-                    setDraft((d) =>
-                      d ? { ...d, industryId: e.target.value || undefined } : d
-                    )
-                  }
-                >
-                  <option value="">None</option>
-                  {industriesOrdered.map(({ industry: i }) => (
-                    <option key={i.id} value={i.id}>
-                      {industryPathLabel(industryMap, i.id)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <IndustrySearchPick
+                label="Industry"
+                emptyLibrary="Add industries in the Industries tab first."
+                industries={industries}
+                industryMap={industryMap}
+                selectedIds={display.industryId ? [display.industryId] : []}
+                disabled={!editing}
+                maxSelected={1}
+                onAdd={(id) => {
+                  if (!editing) return
+                  setDraft((d) => (d ? { ...d, industryId: id } : d))
+                }}
+                onRemove={(id) => {
+                  if (!editing) return
+                  setDraft((d) => {
+                    if (!d) return d
+                    if (d.industryId !== id) return d
+                    return { ...d, industryId: undefined }
+                  })
+                }}
+              />
               <AddressFields<Company> draft={display} editing={editing} setDraft={setDraft} mapVariant="company" />
               <div>
                 <label className="field-label" htmlFor="co-notes">

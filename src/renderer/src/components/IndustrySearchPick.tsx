@@ -12,7 +12,8 @@ export default function IndustrySearchPick({
   selectedIds,
   disabled,
   onAdd,
-  onRemove
+  onRemove,
+  maxSelected
 }: {
   label: string
   emptyLibrary: string
@@ -22,7 +23,10 @@ export default function IndustrySearchPick({
   disabled: boolean
   onAdd: (id: string) => void
   onRemove: (id: string) => void
+  /** When `1`, behaves as a single industry (company form). Omit for multi-select (contacts). */
+  maxSelected?: number
 }): React.ReactElement {
+  const single = maxSelected === 1
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -84,7 +88,7 @@ export default function IndustrySearchPick({
       <span className="field-label">{label}</span>
 
       {selectedIds.length > 0 && (
-        <ul className="industry-search-chips" aria-label="Selected industries">
+        <ul className="industry-search-chips" aria-label={single ? 'Selected industry' : 'Selected industries'}>
           {selectedIds.map((id) => (
             <li key={id} className="industry-search-chip">
               <span className="industry-search-chip-label">{industryPathLabel(industryMap, id)}</span>
@@ -151,7 +155,9 @@ export default function IndustrySearchPick({
         </>
       )}
 
-      {disabled && selectedIds.length === 0 && <div className="muted small">No industries linked.</div>}
+      {disabled && selectedIds.length === 0 && (
+        <div className="muted small">{single ? 'No industry linked.' : 'No industries linked.'}</div>
+      )}
     </div>
   )
 }
