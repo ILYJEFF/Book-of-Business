@@ -3,8 +3,10 @@ import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
+import ContactFilterPanel from '../components/ContactFilterPanel'
 import IndustrySearchPick from '../components/IndustrySearchPick'
 import { contactDisplayName, companyById, industryPathLabel, initials } from '../lib/format'
+import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
 function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
   return {
@@ -25,7 +27,7 @@ function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
 
 export default function ContactsView(): React.ReactElement {
   const { contacts, companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
-  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState(createDefaultContactFilters)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -47,25 +49,10 @@ export default function ContactsView(): React.ReactElement {
     [contacts, selectedId]
   )
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return contacts
-    return contacts.filter((c) => {
-      const blob = [
-        c.firstName,
-        c.lastName,
-        c.title,
-        ...(c.emails ?? []),
-        ...(c.phones?.map((p) => p.value) ?? []),
-        ...c.companyIds.map((id) => companyById(companyMap, id)),
-        ...c.industryIds.map((id) => industryPathLabel(industryMap, id)),
-        c.address
-      ]
-        .join(' ')
-        .toLowerCase()
-      return blob.includes(q)
-    })
-  }, [contacts, query, companyMap, industryMap])
+  const filtered = useMemo(
+    () => contacts.filter((c) => contactPassesFilters(c, filters, companyMap, industryMap)),
+    [contacts, filters, companyMap, industryMap]
+  )
 
   const startCreate = useCallback(() => {
     setSelectedId(null)
@@ -162,19 +149,17 @@ export default function ContactsView(): React.ReactElement {
   return (
     <div className="split-view">
       <div className="list-column">
-        <div className="list-toolbar list-toolbar--search">
-          <div className="search-wrap">
-            <input
-              className="search-input focus-ring"
-              placeholder="Search names, companies, titles, industries…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search contacts"
-            />
-          </div>
-          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
-            New contact
-          </button>
+        <div className="list-toolbar list-toolbar--filters">
+          <ContactFilterPanel
+            filters={filters}
+            setFilters={setFilters}
+            companies={companies}
+            industries={industries}
+            industryMap={industryMap}
+            total={contacts.length}
+            shown={filtered.length}
+            onNew={startCreate}
+          />
         </div>
         <div className="scroll-y list-rows">
           {filtered.map((c) => {
@@ -207,7 +192,7 @@ export default function ContactsView(): React.ReactElement {
             ) : (
               <div className="list-empty">
                 <p className="list-empty-title">No results</p>
-                <p className="list-empty-text">Nothing matches that search. Clear the field or try another name.</p>
+                <p className="list-empty-text">Nothing matches your filters or search. Clear filters or try different terms.</p>
               </div>
             ))}
         </div>

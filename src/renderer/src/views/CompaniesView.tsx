@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Company } from '../../../shared/types'
 import AddressFields from '../components/AddressFields'
+import CompanyFilterPanel from '../components/CompanyFilterPanel'
 import { useApp } from '../context/AppContext'
 import { industryPathLabel } from '../lib/format'
 import { orderIndustriesForUi } from '../lib/industryTree'
+import { companyPassesFilters, createDefaultCompanyFilters } from '../lib/recordFilters'
 
 export default function CompaniesView(): React.ReactElement {
   const { companies, industries, refresh, openRecordRequest, clearOpenRecordRequest } = useApp()
-  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState(createDefaultCompanyFilters)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -27,15 +29,10 @@ export default function CompaniesView(): React.ReactElement {
     [companies, selectedId]
   )
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return companies
-    return companies.filter((c) => {
-      const ind = c.industryId ? industryPathLabel(industryMap, c.industryId) : ''
-      const blob = [c.name, c.website ?? '', c.notes ?? '', c.address ?? '', ind].join(' ').toLowerCase()
-      return blob.includes(q)
-    })
-  }, [companies, query, industryMap])
+  const filtered = useMemo(
+    () => companies.filter((c) => companyPassesFilters(c, filters, industryMap)),
+    [companies, filters, industryMap]
+  )
 
   const open = useCallback((c: Company) => {
     setSelectedId(c.id)
@@ -124,19 +121,16 @@ export default function CompaniesView(): React.ReactElement {
   return (
     <div className="split-view">
       <div className="list-column">
-        <div className="list-toolbar list-toolbar--search">
-          <div className="search-wrap">
-            <input
-              className="search-input focus-ring"
-              placeholder="Search company name, industry, site, notes…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search companies"
-            />
-          </div>
-          <button type="button" className="btn btn-primary focus-ring btn-block" onClick={startCreate}>
-            New company
-          </button>
+        <div className="list-toolbar list-toolbar--filters">
+          <CompanyFilterPanel
+            filters={filters}
+            setFilters={setFilters}
+            industries={industries}
+            industryMap={industryMap}
+            total={companies.length}
+            shown={filtered.length}
+            onNew={startCreate}
+          />
         </div>
         <div className="scroll-y list-rows">
           {filtered.map((c) => {
@@ -167,7 +161,7 @@ export default function CompaniesView(): React.ReactElement {
             ) : (
               <div className="list-empty">
                 <p className="list-empty-title">No results</p>
-                <p className="list-empty-text">Nothing matches that search. Clear the field or try another term.</p>
+                <p className="list-empty-text">Nothing matches your filters or search. Clear filters or try different terms.</p>
               </div>
             ))}
         </div>
