@@ -9,14 +9,18 @@ export interface BookBridge {
   listCompanies: () => Promise<Company[]>
   listContacts: () => Promise<Contact[]>
   saveIndustry: (payload: Partial<Industry> & { name: string }) => Promise<Industry>
-  saveCompany: (payload: Partial<Company> & { name: string }) => Promise<Company>
+  saveCompany: (
+    payload: Partial<Company> & { name: string },
+    photoUrl: string
+  ) => Promise<Company>
   saveContact: (
     payload: Partial<Contact> & {
       firstName: string
       lastName: string
       category: Contact['category']
     },
-    department: string | null
+    department: string | null,
+    photoUrl: string
   ) => Promise<Contact>
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>

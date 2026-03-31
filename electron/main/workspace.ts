@@ -217,7 +217,9 @@ export function saveIndustry(root: string, input: Partial<Industry> & { name: st
 
 export function saveCompany(
   root: string,
-  input: Partial<Company> & { name: string }
+  input: Partial<Company> & { name: string },
+  /** Passed separately from the renderer so large `data:` URLs are not dropped by IPC cloning. */
+  photoUrlFromChannel?: string
 ): Company {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
@@ -229,7 +231,9 @@ export function saveCompany(
       : null
   const coords = optLatLon(input.latitude, input.longitude)
   let photoUrl: string | undefined
-  if (Object.hasOwn(input as object, 'photoUrl')) {
+  if (typeof photoUrlFromChannel === 'string') {
+    photoUrl = photoUrlFromChannel.trim() ? photoUrlFromChannel.trim() : undefined
+  } else if (Object.hasOwn(input as object, 'photoUrl')) {
     photoUrl =
       typeof input.photoUrl === 'string' && input.photoUrl.trim()
         ? input.photoUrl.trim()
@@ -270,7 +274,9 @@ export function saveContact(
   root: string,
   input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] },
   /** Prefer this value (string or null to clear); avoids IPC losing nested fields on some builds. */
-  departmentFromChannel?: unknown
+  departmentFromChannel?: unknown,
+  /** Large `data:` URLs: pass separately so IPC cloning does not drop them. */
+  photoUrlFromChannel?: string
 ): Contact {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
@@ -286,7 +292,9 @@ export function saveContact(
 
   const nextLi = input.linkedinUrl?.trim() || undefined
   let photoUrl: string | undefined
-  if (Object.hasOwn(input as object, 'photoUrl')) {
+  if (typeof photoUrlFromChannel === 'string') {
+    photoUrl = photoUrlFromChannel.trim() ? photoUrlFromChannel.trim() : undefined
+  } else if (Object.hasOwn(input as object, 'photoUrl')) {
     photoUrl =
       typeof input.photoUrl === 'string' && input.photoUrl.trim()
         ? input.photoUrl.trim()

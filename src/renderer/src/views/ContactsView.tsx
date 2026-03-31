@@ -132,7 +132,7 @@ export default function ContactsView(): React.ReactElement {
       const deptRaw = draft.department
       const departmentField: string | null =
         deptRaw != null && String(deptRaw).trim() ? String(deptRaw).trim() : null
-      const { department: _omitDept, ...draftRest } = draft
+      const { department: _omitDept, photoUrl: headshotData, ...draftRest } = draft
       const saved = await window.book.saveContact(
         {
           ...draftRest,
@@ -144,7 +144,8 @@ export default function ContactsView(): React.ReactElement {
           companyIds: draft.companyIds ?? [],
           industryIds: draft.industryIds ?? []
         },
-        departmentField
+        departmentField,
+        typeof headshotData === 'string' ? headshotData : ''
       )
       await refresh({ background: true })
       setSelectedId(saved.id)

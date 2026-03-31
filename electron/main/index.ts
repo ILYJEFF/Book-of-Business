@@ -110,18 +110,23 @@ app.whenReady().then(() => {
     if (!root) throw new Error('No workspace')
     return saveIndustry(root, payload as Parameters<typeof saveIndustry>[1])
   })
-  ipcMain.handle('data:saveCompany', (_e, payload: unknown) => {
+  ipcMain.handle('data:saveCompany', (_e, payload: unknown, photoUrlChannel: unknown) => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
-    return saveCompany(root, payload as Parameters<typeof saveCompany>[1])
+    return saveCompany(
+      root,
+      payload as Parameters<typeof saveCompany>[1],
+      typeof photoUrlChannel === 'string' ? photoUrlChannel : undefined
+    )
   })
-  ipcMain.handle('data:saveContact', (_e, payload: unknown, department: unknown) => {
+  ipcMain.handle('data:saveContact', (_e, payload: unknown, department: unknown, photoUrlChannel: unknown) => {
     const root = needRoot()
     if (!root) throw new Error('No workspace')
     return saveContact(
       root,
       payload as Parameters<typeof saveContact>[1],
-      department
+      department,
+      typeof photoUrlChannel === 'string' ? photoUrlChannel : undefined
     )
   })
   ipcMain.handle('data:updateContactPin', (_e, id: string, lat: number, lon: number) => {

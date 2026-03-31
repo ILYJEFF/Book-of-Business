@@ -10,7 +10,11 @@ export interface BookAPI {
   listCompanies: () => Promise<Company[]>
   listContacts: () => Promise<Contact[]>
   saveIndustry: (payload: Partial<Industry> & { name: string }) => Promise<Industry>
-  saveCompany: (payload: Partial<Company> & { name: string }) => Promise<Company>
+  saveCompany: (
+    payload: Partial<Company> & { name: string },
+    /** Logo image; pass separately so large `data:` URLs survive IPC (same idea as contact `department`). */
+    photoUrl: string
+  ) => Promise<Company>
   saveContact: (
     payload: Partial<Contact> & {
       firstName: string
@@ -18,7 +22,9 @@ export interface BookAPI {
       category: Contact['category']
     },
     /** string = value, null = clear; passed separately so IPC always carries it */
-    department: string | null
+    department: string | null,
+    /** Profile photo `data:` URL; separate from payload for reliable IPC. */
+    photoUrl: string
   ) => Promise<Contact>
   deleteIndustry: (id: string) => Promise<void>
   deleteCompany: (id: string) => Promise<void>
@@ -40,8 +46,10 @@ const api: BookAPI = {
   listCompanies: () => ipcRenderer.invoke('data:listCompanies'),
   listContacts: () => ipcRenderer.invoke('data:listContacts'),
   saveIndustry: (payload) => ipcRenderer.invoke('data:saveIndustry', payload),
-  saveCompany: (payload) => ipcRenderer.invoke('data:saveCompany', payload),
-  saveContact: (payload, department) => ipcRenderer.invoke('data:saveContact', payload, department),
+  saveCompany: (payload, photoUrl) =>
+    ipcRenderer.invoke('data:saveCompany', payload, photoUrl),
+  saveContact: (payload, department, photoUrl) =>
+    ipcRenderer.invoke('data:saveContact', payload, department, photoUrl),
   deleteIndustry: (id) => ipcRenderer.invoke('data:deleteIndustry', id),
   deleteCompany: (id) => ipcRenderer.invoke('data:deleteCompany', id),
   deleteContact: (id) => ipcRenderer.invoke('data:deleteContact', id),
