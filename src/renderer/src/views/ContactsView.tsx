@@ -7,6 +7,7 @@ import ContactAvatar from '../components/ContactAvatar'
 import ContactFilterPanel from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
+import LinkedInGlyph from '../components/LinkedInGlyph'
 import {
   clipboardDataToPhotoDataUrl,
   dataTransferHasExplicitImageMime,
@@ -299,16 +300,42 @@ export default function ContactsView(): React.ReactElement {
         <div className="scroll-y list-rows">
           {filtered.map((c) => {
             const on = c.id === selectedId && !creating
+            const rowLi = contactLinkedInOpenUrl(c)
             return (
-              <button
+              <div
                 key={c.id}
-                type="button"
-                onClick={() => openDetail(c)}
+                role="button"
+                tabIndex={0}
                 className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
+                onClick={() => openDetail(c)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    openDetail(c)
+                  }
+                }}
               >
                 <ContactAvatar key={c.id} contact={c} size="sm" />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="list-row-title">{contactDisplayName(c)}</div>
+                <div className="list-row-main">
+                  <div className="list-row-title-line">
+                    <span className="list-row-title">{contactDisplayName(c)}</span>
+                    {rowLi ? (
+                      <button
+                        type="button"
+                        className="list-row-linkedin-emblem focus-ring"
+                        aria-label={`Open ${contactDisplayName(c)} on LinkedIn`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void window.book.openExternal(rowLi)
+                        }}
+                        onKeyDown={(e) => {
+                          e.stopPropagation()
+                        }}
+                      >
+                        <LinkedInGlyph className="list-row-linkedin-emblem-icon" />
+                      </button>
+                    ) : null}
+                  </div>
                   <div className="list-row-sub">
                     {c.title ||
                       c.department ||
@@ -316,7 +343,7 @@ export default function ContactsView(): React.ReactElement {
                       'No title yet'}
                   </div>
                 </div>
-              </button>
+              </div>
             )
           })}
           {filtered.length === 0 &&
@@ -362,29 +389,6 @@ export default function ContactsView(): React.ReactElement {
                       <> · Birthday {(displayDraft as Contact).birthday}</>
                     )}
                   </p>
-                  {linkedInOpenUrl ? (
-                    <div className="detail-linkedin-row">
-                      <button
-                        type="button"
-                        className="btn-profile-linkedin focus-ring"
-                        aria-label="Open LinkedIn profile in browser"
-                        onClick={() => void openLinkedInProfile()}
-                      >
-                        <svg
-                          className="btn-profile-linkedin-icon"
-                          viewBox="0 0 24 24"
-                          aria-hidden
-                          focusable="false"
-                        >
-                          <path
-                            fill="currentColor"
-                            d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
-                          />
-                        </svg>
-                        <span>Open LinkedIn</span>
-                      </button>
-                    </div>
-                  ) : null}
                 </div>
               </div>
               <div className="detail-actions">
@@ -393,6 +397,16 @@ export default function ContactsView(): React.ReactElement {
                     <button type="button" className="btn btn-ghost focus-ring" onClick={() => selected && startEdit(selected)}>
                       Edit
                     </button>
+                    {linkedInOpenUrl ? (
+                      <button
+                        type="button"
+                        className="btn-profile-linkedin btn-profile-linkedin--icon-only focus-ring"
+                        aria-label="Open LinkedIn profile in browser"
+                        onClick={() => void openLinkedInProfile()}
+                      >
+                        <LinkedInGlyph className="btn-profile-linkedin-icon" />
+                      </button>
+                    ) : null}
                     <button type="button" className="btn btn-danger focus-ring" onClick={() => setConfirmDelete(true)}>
                       Delete
                     </button>
@@ -402,6 +416,17 @@ export default function ContactsView(): React.ReactElement {
                     <button type="button" className="btn btn-ghost focus-ring" onClick={cancelEdit} disabled={saving}>
                       Cancel
                     </button>
+                    {linkedInOpenUrl ? (
+                      <button
+                        type="button"
+                        className="btn-profile-linkedin btn-profile-linkedin--icon-only focus-ring"
+                        aria-label="Open LinkedIn profile in browser"
+                        onClick={() => void openLinkedInProfile()}
+                        disabled={saving}
+                      >
+                        <LinkedInGlyph className="btn-profile-linkedin-icon" />
+                      </button>
+                    ) : null}
                     <button type="button" className="btn btn-primary focus-ring" onClick={() => void save()} disabled={saving}>
                       {saving ? 'Saving…' : 'Save'}
                     </button>
