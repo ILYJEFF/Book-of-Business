@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
@@ -7,6 +7,7 @@ import ContactAvatar from '../components/ContactAvatar'
 import ContactFilterPanel from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
+import { clipboardDataToPhotoDataUrl, imageFileToPhotoDataUrl } from '../lib/contactPhoto'
 import { contactDisplayName, companyById, industryPathLabel } from '../lib/format'
 import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
@@ -35,8 +36,9 @@ export default function ContactsView(): React.ReactElement {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Partial<Contact> | null>(null)
   const [saving, setSaving] = useState(false)
-  const [photoRefreshing, setPhotoRefreshing] = useState(false)
-  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photoDndError, setPhotoDndError] = useState<string | null>(null)
+  const [photoDragOver, setPhotoDragOver] = useState(false)
+  const photoFileInputRef = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const companyMap = useMemo(
@@ -63,6 +65,8 @@ export default function ContactsView(): React.ReactElement {
     setCreating(true)
     setEditing(true)
     setConfirmDelete(false)
+    setPhotoDndError(null)
+    setPhotoDragOver(false)
     setDraft({ ...emptyContact(), id: undefined })
   }, [])
 
@@ -88,10 +92,14 @@ export default function ContactsView(): React.ReactElement {
     setSelectedId(c.id)
     setEditing(true)
     setConfirmDelete(false)
+    setPhotoDndError(null)
+    setPhotoDragOver(false)
     setDraft({ ...c })
   }, [])
 
   const cancelEdit = useCallback(() => {
+    setPhotoDndError(null)
+    setPhotoDragOver(false)
     if (creating) {
       setCreating(false)
       setDraft(null)
@@ -140,29 +148,24 @@ export default function ContactsView(): React.ReactElement {
     }
   }, [draft, refresh])
 
-  const refreshLinkedinPhoto = useCallback(async () => {
-    const id = draft?.id
-    const li = draft?.linkedinUrl?.trim()
-    if (!id || !li) return
-    setPhotoRefreshing(true)
-    setPhotoError(null)
+  const applyContactPhotoFile = useCallback(async (file: File) => {
+    setPhotoDndError(null)
     try {
-      const updated = await window.book.refreshContactLinkedinPhoto(id)
-      await refresh({ background: true })
-      if (updated) {
-        setDraft({ ...updated })
-        if (!updated.photoUrl?.trim()) {
-          setPhotoError(
-            'No photo was found. Use a standard profile link (linkedin.com/in/…). Very private profiles may not expose a preview image.'
-          )
-        }
-      }
-    } catch {
-      setPhotoError('Photo request failed. Check your network and try again.')
-    } finally {
-      setPhotoRefreshing(false)
+      const url = await imageFileToPhotoDataUrl(file)
+      setDraft((d) => (d ? { ...d, photoUrl: url } : d))
+    } catch (err) {
+      setPhotoDndError(err instanceof Error ? err.message : 'Could not use that image.')
     }
-  }, [draft?.id, draft?.linkedinUrl, refresh])
+  }, [])
+
+  const onPhotoFileInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const f = e.target.files?.[0]
+      e.target.value = ''
+      if (f) void applyContactPhotoFile(f)
+    },
+    [applyContactPhotoFile]
+  )
 
   const remove = useCallback(async () => {
     if (!selected) return
@@ -179,6 +182,8 @@ export default function ContactsView(): React.ReactElement {
       setSelectedId(c.id)
       setCreating(false)
       setEditing(false)
+      setPhotoDndError(null)
+      setPhotoDragOver(false)
       setDraft({ ...c })
       setConfirmDelete(false)
     },
@@ -270,7 +275,112 @@ export default function ContactsView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="lg" />
+                {editing ? (
+                  <div
+                    className={`contact-photo-dropzone focus-ring${photoDragOver ? ' contact-photo-dropzone--drag' : ''}`}
+                    tabIndex={0}
+                    role="button"
+                    aria-label="Contact photo: drop an image, paste from clipboard, or choose a file"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        photoFileInputRef.current?.click()
+                      }
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setPhotoDragOver(true)
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setPhotoDragOver(false)
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      e.dataTransfer.dropEffect = 'copy'
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setPhotoDragOver(false)
+                      const f = e.dataTransfer.files?.[0]
+                      if (f) void applyContactPhotoFile(f)
+                    }}
+                    onPaste={(e) => {
+                      const plain = e.clipboardData.getData('text/plain').trim()
+                      if (
+                        plain.startsWith('data:image/') &&
+                        plain.includes(',') &&
+                        plain.length <= 3_500_000
+                      ) {
+                        e.preventDefault()
+                        setPhotoDndError(null)
+                        setDraft((d) => (d ? { ...d, photoUrl: plain } : d))
+                        return
+                      }
+                      void (async () => {
+                        try {
+                          const url = await clipboardDataToPhotoDataUrl(e.clipboardData)
+                          if (!url) return
+                          e.preventDefault()
+                          setPhotoDndError(null)
+                          setDraft((d) => (d ? { ...d, photoUrl: url } : d))
+                        } catch (err) {
+                          e.preventDefault()
+                          setPhotoDndError(
+                            err instanceof Error ? err.message : 'Could not paste that image.'
+                          )
+                        }
+                      })()
+                    }}
+                  >
+                    <ContactAvatar contact={displayDraft as Contact} size="lg" />
+                    <div className="contact-photo-dropzone-hint muted small">
+                      Drop a photo here, click here and paste, or{' '}
+                      <button
+                        type="button"
+                        className="btn-link"
+                        onClick={() => photoFileInputRef.current?.click()}
+                      >
+                        choose file
+                      </button>
+                      .
+                      {(displayDraft as Contact).photoUrl?.trim() ? (
+                        <>
+                          {' '}
+                          <button
+                            type="button"
+                            className="btn-link"
+                            onClick={() => {
+                              setPhotoDndError(null)
+                              setDraft((d) => (d ? { ...d, photoUrl: '' } : d))
+                            }}
+                          >
+                            Remove photo
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                    <input
+                      ref={photoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="visually-hidden"
+                      tabIndex={-1}
+                      onChange={onPhotoFileInputChange}
+                    />
+                    {photoDndError ? (
+                      <p className="contact-photo-dropzone-error small" role="alert">
+                        {photoDndError}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <ContactAvatar key={(displayDraft as Contact).id} contact={displayDraft as Contact} size="lg" />
+                )}
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
                   <p className="detail-meta">
@@ -435,33 +545,6 @@ export default function ContactsView(): React.ReactElement {
                     value={displayDraft.linkedinUrl ?? ''}
                     onChange={(e) => editing && setDraft((d) => (d ? { ...d, linkedinUrl: e.target.value } : d))}
                   />
-                  {editing && (
-                    <div className="linkedin-photo-hint muted small" style={{ marginTop: 6, marginBottom: 0 }}>
-                      <p style={{ margin: '0 0 8px' }}>
-                        Photos load through a metadata service (Microlink) plus a direct fallback, because LinkedIn blocks
-                        most automated requests. Your profile URL is sent to Microlink when fetching. Saved contacts only
-                        for the button; new contacts get a photo on first save.
-                      </p>
-                      {(displayDraft as Contact).id && (displayDraft as Contact).linkedinUrl?.trim() && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-ghost focus-ring"
-                            style={{ padding: '5px 10px', fontSize: 12 }}
-                            disabled={saving || photoRefreshing}
-                            onClick={() => void refreshLinkedinPhoto()}
-                          >
-                            {photoRefreshing ? 'Fetching…' : 'Fetch LinkedIn photo now'}
-                          </button>
-                          {photoError && (
-                            <p className="small" style={{ margin: '8px 0 0', color: 'var(--danger)' }}>
-                              {photoError}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
                 <div>
                   <label className="field-label" htmlFor="web">

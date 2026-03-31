@@ -7,8 +7,6 @@ import type {
   Industry,
   WorkspaceManifest
 } from '../../src/shared/types'
-import { fetchLinkedInProfilePhotoUrl } from './linkedinAvatar'
-
 const SCHEMA = 1
 const APP_ID = 'book-of-business'
 
@@ -246,12 +244,12 @@ export function saveCompany(
   return row
 }
 
-export async function saveContact(
+export function saveContact(
   root: string,
   input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] },
   /** Prefer this value (string or null to clear); avoids IPC losing nested fields on some builds. */
   departmentFromChannel?: unknown
-): Promise<Contact> {
+): Contact {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
   const existing =
@@ -265,15 +263,14 @@ export async function saveContact(
       : (input as Record<string, unknown>)['department']
 
   const nextLi = input.linkedinUrl?.trim() || undefined
-  const prevLi = existing?.linkedinUrl?.trim()
   let photoUrl: string | undefined
-  if (!nextLi) {
-    photoUrl = undefined
-  } else if (nextLi === prevLi && existing?.photoUrl) {
-    photoUrl = existing.photoUrl
+  if (Object.hasOwn(input as object, 'photoUrl')) {
+    photoUrl =
+      typeof input.photoUrl === 'string' && input.photoUrl.trim()
+        ? input.photoUrl.trim()
+        : undefined
   } else {
-    const fetched = await fetchLinkedInProfilePhotoUrl(nextLi)
-    photoUrl = fetched ?? (nextLi === prevLi ? existing?.photoUrl : undefined) ?? undefined
+    photoUrl = existing?.photoUrl
   }
 
   const row: Contact = {
@@ -308,25 +305,6 @@ export async function saveContact(
   writeFileSync(join(root, 'contacts', `${id}.json`), JSON.stringify(row, null, 2), 'utf-8')
   touchManifest(root)
   return row
-}
-
-export async function refreshContactLinkedinPhoto(root: string, id: string): Promise<Contact | null> {
-  ensureWorkspace(root)
-  const p = join(root, 'contacts', `${id}.json`)
-  if (!existsSync(p)) return null
-  const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
-  const li = cur.linkedinUrl?.trim()
-  if (!li) return cur
-  const fetched = await fetchLinkedInProfilePhotoUrl(li)
-  const photoUrl = fetched ?? cur.photoUrl
-  const next: Contact = {
-    ...cur,
-    photoUrl,
-    updatedAt: now()
-  }
-  writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')
-  touchManifest(root)
-  return next
 }
 
 export function updateContactPin(root: string, id: string, latitude: number, longitude: number): Contact {
