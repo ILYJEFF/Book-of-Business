@@ -3,10 +3,11 @@ import type { Company, Contact, Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
+import ContactAvatar from '../components/ContactAvatar'
 import ContactFilterPanel from '../components/ContactFilterPanel'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
-import { contactDisplayName, companyById, industryPathLabel, initials } from '../lib/format'
+import { contactDisplayName, companyById, industryPathLabel } from '../lib/format'
 import { contactPassesFilters, createDefaultContactFilters } from '../lib/recordFilters'
 
 function emptyContact(): Omit<Contact, 'id' | 'createdAt' | 'updatedAt'> {
@@ -196,7 +197,7 @@ export default function ContactsView(): React.ReactElement {
                 onClick={() => openDetail(c)}
                 className={`list-row focus-ring${on ? ' list-row--active' : ''}`}
               >
-                <div className="avatar avatar--sm">{initials(c)}</div>
+                <ContactAvatar contact={c} size="sm" />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="list-row-title">{contactDisplayName(c)}</div>
                   <div className="list-row-sub">
@@ -243,7 +244,7 @@ export default function ContactsView(): React.ReactElement {
           <div className="detail-inner">
             <header className="detail-hero">
               <div className="detail-hero-main">
-                <div className="avatar avatar--lg">{initials(displayDraft as Contact)}</div>
+                <ContactAvatar contact={displayDraft as Contact} size="lg" />
                 <div style={{ minWidth: 0 }}>
                   <h2 className="detail-title">{contactDisplayName(displayDraft as Contact)}</h2>
                   <p className="detail-meta">
@@ -408,6 +409,11 @@ export default function ContactsView(): React.ReactElement {
                     value={displayDraft.linkedinUrl ?? ''}
                     onChange={(e) => editing && setDraft((d) => (d ? { ...d, linkedinUrl: e.target.value } : d))}
                   />
+                  {editing && (
+                    <p className="muted small" style={{ marginTop: 6, marginBottom: 0 }}>
+                      After you save, we try to load the profile photo from LinkedIn’s public page (initials if it cannot).
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="field-label" htmlFor="web">

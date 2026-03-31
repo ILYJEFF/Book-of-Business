@@ -7,6 +7,7 @@ import type {
   Industry,
   WorkspaceManifest
 } from '../../src/shared/types'
+import { fetchLinkedInProfilePhotoUrl } from './linkedinAvatar'
 
 const SCHEMA = 1
 const APP_ID = 'book-of-business'
@@ -245,12 +246,12 @@ export function saveCompany(
   return row
 }
 
-export function saveContact(
+export async function saveContact(
   root: string,
   input: Partial<Contact> & { firstName: string; lastName: string; category: Contact['category'] },
   /** Prefer this value (string or null to clear); avoids IPC losing nested fields on some builds. */
   departmentFromChannel?: unknown
-): Contact {
+): Promise<Contact> {
   ensureWorkspace(root)
   const id = input.id ?? uuidv4()
   const existing =
@@ -262,6 +263,19 @@ export function saveContact(
     departmentFromChannel !== undefined
       ? departmentFromChannel
       : (input as Record<string, unknown>)['department']
+
+  const nextLi = input.linkedinUrl?.trim() || undefined
+  const prevLi = existing?.linkedinUrl?.trim()
+  let photoUrl: string | undefined
+  if (!nextLi) {
+    photoUrl = undefined
+  } else if (nextLi === prevLi && existing?.photoUrl) {
+    photoUrl = existing.photoUrl
+  } else {
+    const fetched = await fetchLinkedInProfilePhotoUrl(nextLi)
+    photoUrl = fetched ?? (nextLi === prevLi ? existing?.photoUrl : undefined) ?? undefined
+  }
+
   const row: Contact = {
     id,
     firstName: input.firstName.trim(),
@@ -275,7 +289,8 @@ export function saveContact(
           .filter((p) => p && String(p.value).trim())
           .map((p) => ({ label: (p.label || 'Phone').trim(), value: String(p.value).trim() }))
       : [],
-    linkedinUrl: input.linkedinUrl?.trim() || undefined,
+    linkedinUrl: nextLi,
+    photoUrl,
     website: input.website?.trim() || undefined,
     companyIds: Array.isArray(input.companyIds) ? [...new Set(input.companyIds)] : [],
     industryIds: Array.isArray(input.industryIds) ? [...new Set(input.industryIds)] : [],

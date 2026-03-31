@@ -40,6 +40,8 @@ export interface Contact {
   emails: string[]
   phones: PhoneEntry[]
   linkedinUrl?: string
+  /** Profile image URL (often from LinkedIn og:image when save fetches successfully). */
+  photoUrl?: string
   website?: string
   companyIds: string[]
   industryIds: string[]
