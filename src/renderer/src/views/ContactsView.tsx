@@ -119,7 +119,7 @@ export default function ContactsView(): React.ReactElement {
         companyIds: draft.companyIds ?? [],
         industryIds: draft.industryIds ?? []
       })
-      await refresh()
+      await refresh({ background: true })
       setSelectedId(saved.id)
       setDraft({ ...saved })
       setEditing(false)
@@ -133,7 +133,7 @@ export default function ContactsView(): React.ReactElement {
   const remove = useCallback(async () => {
     if (!selected) return
     await window.book.deleteContact(selected.id)
-    await refresh()
+    await refresh({ background: true })
     setSelectedId(null)
     setDraft(null)
     setEditing(false)

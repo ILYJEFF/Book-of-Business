@@ -74,7 +74,7 @@ export default function CompaniesView(): React.ReactElement {
         industryId: draft.industryId || undefined,
         notes: draft.notes?.trim() || undefined
       })
-      await refresh()
+      await refresh({ background: true })
       setSelectedId(saved.id)
       setDraft({ ...saved })
       setEditing(false)
@@ -88,7 +88,7 @@ export default function CompaniesView(): React.ReactElement {
   const remove = useCallback(async () => {
     if (!selected) return
     await window.book.deleteCompany(selected.id)
-    await refresh()
+    await refresh({ background: true })
     setSelectedId(null)
     setDraft(null)
     setEditing(false)

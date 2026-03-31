@@ -24,7 +24,7 @@ interface AppState {
   setSection: (s: Section) => void
   requestOpenRecord: (kind: OpenRecordKind, id: string) => void
   clearOpenRecordRequest: () => void
-  refresh: () => Promise<void>
+  refresh: (opts?: { background?: boolean }) => Promise<void>
   chooseWorkspace: () => Promise<void>
   clearWorkspace: () => Promise<void>
   openWorkspaceFolder: () => Promise<void>
@@ -41,8 +41,10 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
   const [loading, setLoading] = useState(true)
   const [openRecordRequest, setOpenRecordRequest] = useState<{ kind: OpenRecordKind; id: string } | null>(null)
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
+  const refresh = useCallback(async (opts?: { background?: boolean }) => {
+    if (!opts?.background) {
+      setLoading(true)
+    }
     try {
       const w = await window.book.getWorkspace()
       setWorkspacePath(w)

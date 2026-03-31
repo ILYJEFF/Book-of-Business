@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { Industry } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import { industryPathLabel } from '../lib/format'
@@ -13,6 +13,10 @@ export default function IndustriesView(): React.ReactElement {
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  /** Add sub-industry: draft.parentId is sometimes cleared by the parent <select> before save; keep a sync fallback. */
+  const createLockedParentIdRef = useRef<string | null>(null)
+  const parentSelectTouchedRef = useRef(false)
 
   const industryMap = useMemo(
     () => new Map(industries.map((i) => [i.id, i] as const)),
@@ -32,6 +36,8 @@ export default function IndustriesView(): React.ReactElement {
   }, [industries, draft?.id])
 
   const open = useCallback((i: Industry) => {
+    createLockedParentIdRef.current = null
+    parentSelectTouchedRef.current = false
     setSelectedId(i.id)
     setCreating(false)
     setEditing(false)
@@ -41,15 +47,20 @@ export default function IndustriesView(): React.ReactElement {
   }, [])
 
   const startCreate = useCallback((parentId?: string) => {
+    const pid = parentId?.trim() || undefined
+    createLockedParentIdRef.current = pid ?? null
+    parentSelectTouchedRef.current = false
     setSelectedId(null)
     setCreating(true)
     setEditing(true)
-    setDraft({ name: '', description: '', parentId: parentId || undefined })
+    setDraft({ name: '', description: '', parentId: pid })
     setConfirmDelete(false)
     setDeleteError(null)
   }, [])
 
   const startEdit = useCallback((i: Industry) => {
+    createLockedParentIdRef.current = null
+    parentSelectTouchedRef.current = false
     setCreating(false)
     setSelectedId(i.id)
     setEditing(true)
@@ -60,6 +71,8 @@ export default function IndustriesView(): React.ReactElement {
 
   const cancelEdit = useCallback(() => {
     if (creating) {
+      createLockedParentIdRef.current = null
+      parentSelectTouchedRef.current = false
       setCreating(false)
       setDraft(null)
       setEditing(false)
@@ -75,15 +88,20 @@ export default function IndustriesView(): React.ReactElement {
     if (!draft?.name?.trim()) return
     setSaving(true)
     try {
-      const parentTrimmed = draft.parentId?.trim()
+      let resolvedParent = draft.parentId?.trim() || undefined
+      if (!draft.id && !resolvedParent && !parentSelectTouchedRef.current && createLockedParentIdRef.current) {
+        resolvedParent = createLockedParentIdRef.current.trim()
+      }
       const payload: Partial<Industry> & { name: string } = {
         name: draft.name.trim(),
         description: draft.description?.trim() || undefined,
-        parentId: parentTrimmed || undefined
+        parentId: resolvedParent
       }
       if (draft.id) payload.id = draft.id
       const saved = await window.book.saveIndustry(payload)
-      await refresh()
+      await refresh({ background: true })
+      createLockedParentIdRef.current = null
+      parentSelectTouchedRef.current = false
       setSelectedId(saved.id)
       setDraft({ ...saved })
       setEditing(false)
@@ -99,7 +117,7 @@ export default function IndustriesView(): React.ReactElement {
     setDeleteError(null)
     try {
       await window.book.deleteIndustry(selected.id)
-      await refresh()
+      await refresh({ background: true })
       setSelectedId(null)
       setDraft(null)
       setEditing(false)
@@ -229,7 +247,7 @@ export default function IndustriesView(): React.ReactElement {
                     <button
                       type="button"
                       className="btn btn-ghost focus-ring"
-                      onClick={() => selected && startCreate(selected.id)}
+                      onClick={() => selectedId && startCreate(selectedId)}
                     >
                       Add sub-industry
                     </button>
@@ -303,17 +321,12 @@ export default function IndustriesView(): React.ReactElement {
                   className="select-input focus-ring"
                   disabled={!editing}
                   value={display.parentId ?? ''}
-                  onChange={(e) =>
-                    editing &&
-                    setDraft((d) =>
-                      d
-                        ? {
-                            ...d,
-                            parentId: e.target.value ? e.target.value : undefined
-                          }
-                        : d
-                    )
-                  }
+                  onChange={(e) => {
+                    if (!editing) return
+                    if (creating) parentSelectTouchedRef.current = true
+                    const v = e.target.value ? e.target.value : undefined
+                    setDraft((d) => (d ? { ...d, parentId: v } : d))
+                  }}
                 >
                   <option value="">Top level (no parent)</option>
                   {parentOptions.map((p) => (
