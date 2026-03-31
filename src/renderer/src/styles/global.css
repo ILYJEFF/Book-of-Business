@@ -406,6 +406,111 @@ a:hover {
   color: var(--text-muted);
   font-size: 12px;
 }
+.map-marker-dot--stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(28, 27, 25, 0.92);
+  line-height: 1;
+}
+.map-marker-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-medium);
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.map-stack-tooltip-pane.leaflet-tooltip {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  padding: 0;
+  max-width: min(280px, 72vw);
+}
+.map-stack-tooltip-pane.leaflet-tooltip::before {
+  border-top-color: var(--bg-panel);
+}
+.map-stack-tooltip {
+  padding: 10px 12px;
+  max-height: min(240px, 40vh);
+  overflow: auto;
+}
+.map-stack-tooltip-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.map-stack-tooltip ul {
+  margin: 0;
+  padding: 0 0 0 14px;
+  list-style: disc;
+}
+.map-stack-tooltip li {
+  margin: 4px 0;
+  padding-right: 4px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.map-stack-name {
+  font-weight: 500;
+}
+.map-stack-kind {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+.map-popup-stack-lead {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.map-popup-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+.map-popup-stack-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  margin: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-sunk);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s var(--ease-out), border-color 0.12s var(--ease-out);
+}
+.map-popup-stack-row:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+}
 
 /* Sidebar */
 .sidebar {

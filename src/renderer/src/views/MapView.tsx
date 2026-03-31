@@ -1,19 +1,92 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import type { Company, Contact } from '../../../shared/types'
 import { useApp } from '../context/AppContext'
 import { contactDisplayName } from '../lib/format'
 
 const PIN_CONTACT = '#9a6b3c'
 const PIN_COMPANY = '#5f735f'
 
-function pinIcon(color: string): L.DivIcon {
+/** Same key = same screen dot (stacked pins). */
+function coordKey(lat: number, lon: number): string {
+  return `${lat.toFixed(6)},${lon.toFixed(6)}`
+}
+
+interface PinStack {
+  lat: number
+  lon: number
+  contacts: Contact[]
+  companies: Company[]
+}
+
+function buildPinStacks(plottedContacts: Contact[], plottedCompanies: Company[]): PinStack[] {
+  const byKey = new Map<string, PinStack>()
+  const touch = (lat: number, lon: number) => {
+    const key = coordKey(lat, lon)
+    let s = byKey.get(key)
+    if (!s) {
+      s = { lat, lon, contacts: [], companies: [] }
+      byKey.set(key, s)
+    }
+    return s
+  }
+  for (const c of plottedContacts) {
+    touch(c.latitude!, c.longitude!).contacts.push(c)
+  }
+  for (const c of plottedCompanies) {
+    touch(c.latitude!, c.longitude!).companies.push(c)
+  }
+  return [...byKey.values()]
+}
+
+function stackIcon(contactCount: number, companyCount: number): L.DivIcon {
+  const n = contactCount + companyCount
+  let bg: string
+  if (contactCount > 0 && companyCount > 0) {
+    bg = `linear-gradient(135deg, ${PIN_CONTACT} 48%, ${PIN_COMPANY} 52%)`
+  } else if (contactCount > 0) {
+    bg = PIN_CONTACT
+  } else {
+    bg = PIN_COMPANY
+  }
+  const badge = n > 1 ? `<span class="map-marker-count">${n}</span>` : ''
+  const size = n > 1 ? 22 : 18
+  const half = size / 2
   return L.divIcon({
-    className: 'map-marker-wrap',
-    html: `<div class="map-marker-dot" style="background:${color}"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -10]
+    className: 'map-marker-wrap map-marker-wrap--stack',
+    html: `<div class="map-marker-dot map-marker-dot--stack" style="background:${bg}">${badge}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [half, half],
+    popupAnchor: [0, -half - 2]
   })
+}
+
+function stackTooltipHtml(stack: PinStack): string {
+  const rows: string[] = []
+  for (const c of stack.contacts) {
+    rows.push(`<li><span class="map-stack-name">${escapeHtml(contactDisplayName(c))}</span> <span class="map-stack-kind">Person</span></li>`)
+  }
+  for (const c of stack.companies) {
+    rows.push(`<li><span class="map-stack-name">${escapeHtml(c.name)}</span> <span class="map-stack-kind">Company</span></li>`)
+  }
+  const title =
+    rows.length === 1 ? 'At this pin' : `${rows.length} at this pin`
+  return `<div class="map-stack-tooltip"><div class="map-stack-tooltip-title">${title}</div><ul>${rows.join('')}</ul></div>`
+}
+
+function stackPopupHtml(stack: PinStack): string {
+  const buttons: string[] = []
+  for (const c of stack.contacts) {
+    buttons.push(
+      `<button type="button" class="map-popup-stack-row focus-ring" data-map-open="contact" data-map-id="${escapeHtml(c.id)}">${escapeHtml(contactDisplayName(c))} <span class="map-stack-kind">Person</span></button>`
+    )
+  }
+  for (const c of stack.companies) {
+    buttons.push(
+      `<button type="button" class="map-popup-stack-row focus-ring" data-map-open="company" data-map-id="${escapeHtml(c.id)}">${escapeHtml(c.name)} <span class="map-stack-kind">Company</span></button>`
+    )
+  }
+  return `<div class="map-popup map-popup-stack"><p class="map-popup-stack-lead">Open one:</p>${buttons.join('')}</div>`
 }
 
 export default function MapView(): React.ReactElement {
@@ -71,39 +144,58 @@ export default function MapView(): React.ReactElement {
 
     group.clearLayers()
     const corners: L.LatLngTuple[] = []
+    const stacks = buildPinStacks(plottedContacts, plottedCompanies)
 
-    for (const c of plottedContacts) {
-      const lat = c.latitude!
-      const lon = c.longitude!
-      const m = L.marker([lat, lon], { icon: pinIcon(PIN_CONTACT), draggable: true })
-      m.bindPopup(
-        `<div class="map-popup"><strong>${escapeHtml(contactDisplayName(c))}</strong><br/><span>Person</span></div>`
-      )
-      m.on('click', () => requestOpenRecord('contact', c.id))
+    for (const stack of stacks) {
+      const { lat, lon, contacts: sc, companies: sco } = stack
+      const m = L.marker([lat, lon], {
+        icon: stackIcon(sc.length, sco.length),
+        draggable: true
+      })
+
+      m.bindTooltip(stackTooltipHtml(stack), {
+        direction: 'top',
+        sticky: true,
+        opacity: 1,
+        className: 'map-stack-tooltip-pane'
+      })
+
+      const total = sc.length + sco.length
+      if (total === 1) {
+        m.on('click', () => {
+          if (sc[0]) requestOpenRecord('contact', sc[0].id)
+          else if (sco[0]) requestOpenRecord('company', sco[0].id)
+        })
+      } else {
+        m.bindPopup(stackPopupHtml(stack))
+        m.on('popupopen', () => {
+          const el = m.getPopup()?.getElement()
+          if (!el) return
+          el.querySelectorAll<HTMLButtonElement>('.map-popup-stack-row').forEach((btn) => {
+            const handler = (ev: Event) => {
+              ev.preventDefault()
+              const kind = btn.getAttribute('data-map-open')
+              const id = btn.getAttribute('data-map-id')
+              if (kind === 'contact' && id) requestOpenRecord('contact', id)
+              else if (kind === 'company' && id) requestOpenRecord('company', id)
+              m.closePopup()
+            }
+            btn.addEventListener('click', handler, { once: true })
+          })
+        })
+      }
+
       m.on('dragend', () => {
         const ll = m.getLatLng()
-        void window.book
-          .updateContactPin(c.id, ll.lat, ll.lng)
+        const ops: Promise<unknown>[] = [
+          ...sc.map((c) => window.book.updateContactPin(c.id, ll.lat, ll.lng)),
+          ...sco.map((c) => window.book.updateCompanyPin(c.id, ll.lat, ll.lng))
+        ]
+        void Promise.all(ops)
           .then(() => refresh({ background: true }))
           .catch(() => {})
       })
-      group.addLayer(m)
-      corners.push([lat, lon])
-    }
 
-    for (const c of plottedCompanies) {
-      const lat = c.latitude!
-      const lon = c.longitude!
-      const m = L.marker([lat, lon], { icon: pinIcon(PIN_COMPANY), draggable: true })
-      m.bindPopup(`<div class="map-popup"><strong>${escapeHtml(c.name)}</strong><br/><span>Company</span></div>`)
-      m.on('click', () => requestOpenRecord('company', c.id))
-      m.on('dragend', () => {
-        const ll = m.getLatLng()
-        void window.book
-          .updateCompanyPin(c.id, ll.lat, ll.lng)
-          .then(() => refresh({ background: true }))
-          .catch(() => {})
-      })
       group.addLayer(m)
       corners.push([lat, lon])
     }
@@ -145,7 +237,8 @@ export default function MapView(): React.ReactElement {
           </ul>
         </div>
         <p className="map-toolbar-note muted small">
-          Tiles use OpenStreetMap. Click a pin to open the record. Drag a pin to move it; coordinates save to disk.
+          Same coordinates share one dot (count badge when stacked). Hover a dot for everyone there. Click opens the record,
+          or choose from the list when several share a pin. Drag moves every record at that pin.
         </p>
       </div>
       <div className="map-frame">
