@@ -7,9 +7,17 @@ import {
   useState,
   type ReactNode
 } from 'react'
-import type { Company, Contact, Industry } from '../../../shared/types'
+import type { Company, Contact, Industry, Tag } from '../../../shared/types'
 
-export type Section = 'contacts' | 'companies' | 'industries' | 'map' | 'settings'
+export type Section =
+  | 'contacts'
+  | 'favorites'
+  | 'companies'
+  | 'tags'
+  | 'industries'
+  | 'map'
+  | 'timezones'
+  | 'settings'
 
 export type OpenRecordKind = 'contact' | 'company'
 
@@ -17,6 +25,7 @@ interface AppState {
   workspacePath: string | null
   section: Section
   industries: Industry[]
+  tags: Tag[]
   companies: Company[]
   contacts: Contact[]
   loading: boolean
@@ -36,6 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
   const [workspacePath, setWorkspacePath] = useState<string | null>(null)
   const [section, setSection] = useState<Section>('contacts')
   const [industries, setIndustries] = useState<Industry[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,16 +60,19 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
       setWorkspacePath(w)
       if (!w) {
         setIndustries([])
+        setTags([])
         setCompanies([])
         setContacts([])
         return
       }
-      const [ind, co, ct] = await Promise.all([
+      const [ind, tg, co, ct] = await Promise.all([
         window.book.listIndustries(),
+        window.book.listTags(),
         window.book.listCompanies(),
         window.book.listContacts()
       ])
       setIndustries(ind)
+      setTags(tg)
       setCompanies(co)
       setContacts(ct)
     } finally {
@@ -99,6 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
       workspacePath,
       section,
       industries,
+      tags,
       companies,
       contacts,
       loading,
@@ -115,6 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }): React.ReactE
       workspacePath,
       section,
       industries,
+      tags,
       companies,
       contacts,
       loading,

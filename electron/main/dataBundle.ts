@@ -296,6 +296,8 @@ function normalizeContactRow(
     birthday: strOpt(r.birthday),
     address: strOpt(r.address)
   }
+  const tzImp = strOpt(r.timeZone)
+  if (tzImp) input.timeZone = tzImp
   const lat = optNum(r.latitude)
   const lon = optNum(r.longitude)
   if (lat !== undefined && lon !== undefined) {

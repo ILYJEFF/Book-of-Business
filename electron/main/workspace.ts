@@ -9,6 +9,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'fs'
+import { timeZoneFromCoordinates } from './geoTimeZone'
 import { basename, extname, isAbsolute, join, relative, resolve } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { formatNanpPhone } from '../../src/shared/phoneFormat'
@@ -576,6 +577,11 @@ export function saveContact(
         : undefined
       : existing?.birthday,
     address: input.address?.trim() || undefined,
+    timeZone: Object.hasOwn(input as object, 'timeZone')
+      ? typeof input.timeZone === 'string' && input.timeZone.trim()
+        ? input.timeZone.trim()
+        : undefined
+      : existing?.timeZone,
     ...coords,
     attachments,
     createdAt: existing?.createdAt ?? now(),
@@ -592,10 +598,12 @@ export function updateContactPin(root: string, id: string, latitude: number, lon
   if (!existsSync(p)) throw new Error('NOT_FOUND')
   const cur = JSON.parse(readFileSync(p, 'utf-8')) as Contact
   const base = coerceContactFromDisk(cur)
+  const inferred = timeZoneFromCoordinates(latitude, longitude)
   const next: Contact = {
     ...base,
     latitude,
     longitude,
+    timeZone: inferred ?? base.timeZone,
     updatedAt: now()
   }
   writeFileSync(p, JSON.stringify(next, null, 2), 'utf-8')

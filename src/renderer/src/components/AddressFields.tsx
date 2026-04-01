@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { GeocodeResult } from '../../../shared/types'
+import { timeZoneFromCoordinates } from '../lib/geoTimeZone'
 import AddressPinMap from './AddressPinMap'
 
 function suggestionLine(r: GeocodeResult): string {
@@ -22,6 +23,7 @@ interface Draft {
   address?: string
   latitude?: number
   longitude?: number
+  timeZone?: string
 }
 
 export type SharePinPayload = { latitude: number; longitude: number; address?: string }
@@ -96,23 +98,28 @@ export default function AddressFields<T extends Draft>({
   const applyVerifyUseSuggestion = useCallback(() => {
     if (!verify) return
     const { result, suggestion } = verify
-    setDraft((d) =>
-      d
-        ? {
-            ...d,
-            address: suggestion,
-            latitude: result.lat,
-            longitude: result.lon
-          }
-        : d
-    )
+    setDraft((d) => {
+      if (!d) return d
+      const tz = timeZoneFromCoordinates(result.lat, result.lon)
+      return {
+        ...d,
+        address: suggestion,
+        latitude: result.lat,
+        longitude: result.lon,
+        ...(tz ? { timeZone: tz } : {})
+      }
+    })
     setVerify(null)
   }, [verify, setDraft])
 
   const applyVerifyKeepWording = useCallback(() => {
     if (!verify) return
     const { result } = verify
-    setDraft((d) => (d ? { ...d, latitude: result.lat, longitude: result.lon } : d))
+    setDraft((d) => {
+      if (!d) return d
+      const tz = timeZoneFromCoordinates(result.lat, result.lon)
+      return { ...d, latitude: result.lat, longitude: result.lon, ...(tz ? { timeZone: tz } : {}) }
+    })
     setVerify(null)
   }, [verify, setDraft])
 
@@ -122,7 +129,7 @@ export default function AddressFields<T extends Draft>({
 
   const clearPin = useCallback(() => {
     setErr(null)
-    setDraft((d) => (d ? { ...d, latitude: undefined, longitude: undefined } : d))
+    setDraft((d) => (d ? { ...d, latitude: undefined, longitude: undefined, timeZone: undefined } : d))
   }, [setDraft])
 
   const hasPin =
@@ -288,7 +295,12 @@ export default function AddressFields<T extends Draft>({
           variant={mapVariant}
           onDragEnd={
             editing
-              ? (lat, lon) => setDraft((d) => (d ? { ...d, latitude: lat, longitude: lon } : d))
+              ? (lat, lon) =>
+                  setDraft((d) => {
+                    if (!d) return d
+                    const tz = timeZoneFromCoordinates(lat, lon)
+                    return { ...d, latitude: lat, longitude: lon, ...(tz ? { timeZone: tz } : {}) }
+                  })
               : undefined
           }
         />

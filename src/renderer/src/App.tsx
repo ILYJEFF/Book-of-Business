@@ -6,6 +6,9 @@ import CompaniesView from './views/CompaniesView'
 import IndustriesView from './views/IndustriesView'
 import SettingsView from './views/SettingsView'
 import MapView from './views/MapView'
+import FavoritesView from './views/FavoritesView'
+import TagsView from './views/TagsView'
+import TimeZonesMapView from './views/TimeZonesMapView'
 
 function Shell(): React.ReactElement {
   const { workspacePath, section, loading } = useApp()
@@ -33,9 +36,12 @@ function Shell(): React.ReactElement {
       <main className="app-main">
         <div className="stage">
           {section === 'contacts' && <ContactsView />}
+          {section === 'favorites' && <FavoritesView />}
           {section === 'companies' && <CompaniesView />}
+          {section === 'tags' && <TagsView />}
           {section === 'industries' && <IndustriesView />}
           {section === 'map' && <MapView />}
+          {section === 'timezones' && <TimeZonesMapView />}
           {section === 'settings' && <SettingsView />}
         </div>
       </main>

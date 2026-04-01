@@ -2922,3 +2922,208 @@ a:hover {
 .contact-docs-remove:disabled {
   opacity: 0.5;
 }
+
+/* Contact card: time zone */
+.contact-tz-section {
+  margin-top: 20px;
+  padding-top: 4px;
+}
+.contact-tz-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 10px;
+}
+.contact-tz-hint {
+  margin: 10px 0 0;
+  max-width: 52ch;
+  line-height: 1.5;
+}
+.contact-tz-readout {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+.contact-tz-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.contact-tz-pin-hint {
+  margin: 8px 0 0;
+  max-width: 52ch;
+  line-height: 1.45;
+}
+
+/* Time zone search picker (contacts) */
+.tz-menu-wrap .tz-menu-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, 70vh);
+  padding: 0;
+  overflow: hidden;
+}
+.tz-menu-search-row {
+  flex-shrink: 0;
+  padding: 8px;
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--bg-sunk);
+}
+.tz-menu-search {
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+.tz-menu-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 4px;
+}
+.tz-menu-orphan-note {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.tz-menu-cap {
+  margin: 8px 10px 10px;
+}
+
+/* US time zone strip (sidebar → Time zones) */
+.tz-map-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 28px 32px 28px;
+  max-width: 1100px;
+}
+.tz-map-view-header {
+  flex-shrink: 0;
+  margin-bottom: 22px;
+}
+.tz-map-view-title {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 6px 0 0;
+  line-height: 1.2;
+}
+.tz-map-view-lead {
+  margin: 10px 0 0;
+  max-width: 58ch;
+  line-height: 1.55;
+}
+.tz-map-view-lead strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.tz-map-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+.tz-map-band {
+  position: relative;
+  padding: 18px 16px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+.tz-map-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  pointer-events: none;
+  background: linear-gradient(145deg, transparent 0%, rgba(255, 250, 240, 0.07) 100%);
+}
+.tz-map-band:hover {
+  border-color: var(--border-medium);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  transform: translateY(-2px);
+}
+.tz-map-band-top {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+.tz-map-band-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.tz-map-band-sub {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.tz-map-band-time {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.tz-map-band-date {
+  margin: 6px 0 0;
+}
+.tz-map-band-iana {
+  margin: 10px 0 0;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  word-break: break-all;
+}
+.tz-map-footnote {
+  margin-top: 22px;
+  max-width: 62ch;
+  line-height: 1.5;
+}
+
+.tz-map-band--pacific {
+  background: linear-gradient(160deg, #2c3d42 0%, #384848 100%);
+  border-color: rgba(120, 168, 176, 0.35);
+}
+.tz-map-band--alaska {
+  background: linear-gradient(160deg, #343b48 0%, #3d4555 100%);
+  border-color: rgba(140, 158, 196, 0.35);
+}
+.tz-map-band--pt {
+  background: linear-gradient(160deg, #3a4550 0%, #4a5562 100%);
+  border-color: rgba(148, 176, 200, 0.3);
+}
+.tz-map-band--mt {
+  background: linear-gradient(160deg, #3d453c 0%, #4d5648 100%);
+  border-color: rgba(160, 188, 150, 0.32);
+}
+.tz-map-band--az {
+  background: linear-gradient(160deg, #4a4238 0%, #5c5044 100%);
+  border-color: rgba(212, 168, 92, 0.35);
+}
+.tz-map-band--ct {
+  background: linear-gradient(160deg, #4a4236 0%, #5c4f3a 100%);
+  border-color: rgba(227, 188, 110, 0.4);
+}
+.tz-map-band--et {
+  background: linear-gradient(160deg, #483838 0%, #5a4242 100%);
+  border-color: rgba(200, 130, 120, 0.35);
+}
+.tz-map-band--atl {
+  background: linear-gradient(160deg, #3a3648 0%, #484458 100%);
+  border-color: rgba(168, 150, 200, 0.32);
+}

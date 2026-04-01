@@ -76,6 +76,7 @@ export function contactPassesFilters(
       ...(c.tagIds ?? []).map((id) => tagMap.get(id)?.name ?? ''),
       c.birthday ?? '',
       c.address,
+      c.timeZone ?? '',
       c.notes ?? ''
     ]
       .join(' ')

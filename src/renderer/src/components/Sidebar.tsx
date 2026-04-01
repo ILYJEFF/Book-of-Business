@@ -1,29 +1,35 @@
 import { useApp } from '../context/AppContext'
 
 type NavItem = {
-  id: 'contacts' | 'companies' | 'map' | 'industries' | 'settings'
+  id: 'contacts' | 'favorites' | 'companies' | 'tags' | 'map' | 'timezones' | 'industries' | 'settings'
   label: string
-  countKey?: 'contacts' | 'companies' | 'map' | 'industries'
+  countKey?: 'contacts' | 'companies' | 'favorites' | 'tags' | 'map' | 'industries'
 }
 
 const items: NavItem[] = [
   { id: 'contacts', label: 'Contacts', countKey: 'contacts' },
+  { id: 'favorites', label: 'Favorites', countKey: 'favorites' },
   { id: 'companies', label: 'Companies', countKey: 'companies' },
+  { id: 'tags', label: 'Tags', countKey: 'tags' },
   { id: 'map', label: 'Map', countKey: 'map' },
+  { id: 'timezones', label: 'Time zones' },
   { id: 'industries', label: 'Industries', countKey: 'industries' },
   { id: 'settings', label: 'Library' }
 ]
 
 export default function Sidebar(): React.ReactElement {
-  const { section, setSection, contacts, companies, industries } = useApp()
+  const { section, setSection, contacts, companies, industries, tags } = useApp()
 
   const plotted =
     contacts.filter((c) => c.latitude != null && c.longitude != null).length +
     companies.filter((c) => c.latitude != null && c.longitude != null).length
 
+  const favCount = contacts.filter((c) => c.favorite === true).length
   const counts: Record<string, number> = {
     contacts: contacts.length,
+    favorites: favCount,
     companies: companies.length,
+    tags: tags.length,
     map: plotted,
     industries: industries.length
   }

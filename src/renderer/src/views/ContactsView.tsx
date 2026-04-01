@@ -6,11 +6,13 @@ import AddressFields from '../components/AddressFields'
 import CategoryPills from '../components/CategoryPills'
 import ContactAvatar from '../components/ContactAvatar'
 import ContactFilterPanel, { ContactFiltersRail } from '../components/ContactFilterPanel'
+import ContactTimeZoneSection from '../components/ContactTimeZoneSection'
 import DepartmentMenu from '../components/DepartmentMenu'
 import IndustrySearchPick from '../components/IndustrySearchPick'
 import LinkedInGlyph from '../components/LinkedInGlyph'
 import { useWorkspacePhotoUrl } from '../hooks/useWorkspacePhotoUrl'
 import { contactDisplayName, companyById, contactLinkedInOpenUrl, industryPathLabel } from '../lib/format'
+import { timeZoneFromCoordinates } from '../lib/geoTimeZone'
 import {
   CONTACT_CATEGORIES,
   CONTACT_CATEGORY_ORDER,
@@ -143,12 +145,14 @@ export default function ContactsView(): React.ReactElement {
       setConfirmDelete(false)
       resetPhotoFieldUi()
       setNewTagName('')
+      const tz = timeZoneFromCoordinates(p.latitude, p.longitude)
       setDraft({
         ...emptyContact(),
         id: undefined,
         latitude: p.latitude,
         longitude: p.longitude,
-        address: (p.address ?? '').trim() || ''
+        address: (p.address ?? '').trim() || '',
+        ...(tz ? { timeZone: tz } : {})
       })
     },
     [resetPhotoFieldUi]
@@ -810,6 +814,8 @@ export default function ContactsView(): React.ReactElement {
                   onClick: startCreateAtSharedPin
                 }}
               />
+
+              <ContactTimeZoneSection draft={displayDraft} editing={editing} setDraft={setDraft} />
 
               <EmailsBlock draft={displayDraft as Contact} editing={editing} setDraft={setDraft} />
               <PhonesBlock draft={displayDraft as Contact} editing={editing} setDraft={setDraft} />

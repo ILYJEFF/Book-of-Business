@@ -89,6 +89,8 @@ export interface Contact {
   /** ISO date YYYY-MM-DD */
   birthday?: string
   address?: string
+  /** IANA zone (e.g. America/Chicago). Set in the contact card or inferred from map coordinates. */
+  timeZone?: string
   latitude?: number
   longitude?: number
   /** Résumés, assessments, references, etc. Files live under `contact-attachments/` */

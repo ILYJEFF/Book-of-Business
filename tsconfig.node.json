@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "types": ["electron-vite/node", "node"]
   },
-  "include": ["electron.vite.config.ts", "electron/**/*.ts", "src/shared/**/*.ts"]
+  "include": ["electron.vite.config.ts", "electron/**/*.ts", "electron/**/*.d.ts", "src/shared/**/*.ts"]
 }
