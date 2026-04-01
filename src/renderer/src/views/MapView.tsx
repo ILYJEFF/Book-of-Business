@@ -316,12 +316,6 @@ export default function MapView(): React.ReactElement {
             </li>
           </ul>
         </div>
-        <p className="map-toolbar-note muted small">
-          Same mailing address shares one dot (even if geocodes differ slightly; position is averaged). Records with no address
-          line still stack by matching coordinates. Count badge when stacked. Hover for everyone there. People: click opens the
-          profile when alone; otherwise pick from the menu. Companies: menu with Open and Google Maps. Drag updates every record
-          in that stack.
-        </p>
       </div>
       <div className="map-frame">
         <div ref={wrapRef} className="map-leaflet" role="application" aria-label="Map of contacts and companies" />

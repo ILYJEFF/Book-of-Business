@@ -354,10 +354,6 @@ a:hover {
 .map-legend-dot--company {
   background: #5f735f;
 }
-.map-toolbar-note {
-  margin: 12px 0 0;
-  max-width: 62ch;
-}
 .map-frame {
   flex: 1;
   min-height: 0;
