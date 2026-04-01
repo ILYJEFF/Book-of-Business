@@ -17,7 +17,6 @@ export type Section =
   | 'industries'
   | 'map'
   | 'timezones'
-  | 'recruiting'
   | 'settings'
 
 export type OpenRecordKind = 'contact' | 'company'

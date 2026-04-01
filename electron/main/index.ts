@@ -113,8 +113,7 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false,
-      webviewTag: true
+      nodeIntegration: false
     }
   })
 
@@ -131,25 +130,6 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   installApplicationMenu()
-  app.on('web-contents-created', (_event, contents) => {
-    contents.setWindowOpenHandler(() => ({ action: 'deny' }))
-    contents.on('will-attach-webview', (event, webPreferences, params) => {
-      delete webPreferences.preload
-      webPreferences.nodeIntegration = false
-      webPreferences.contextIsolation = true
-      webPreferences.sandbox = true
-      webPreferences.webSecurity = true
-      const src = typeof params.src === 'string' ? params.src : ''
-      try {
-        const u = new URL(src)
-        if (u.protocol !== 'https:' && u.protocol !== 'http:') {
-          event.preventDefault()
-        }
-      } catch {
-        event.preventDefault()
-      }
-    })
-  })
   const dockIcon = resolveWindowIcon()
   if (process.platform === 'darwin' && dockIcon && !app.isPackaged) {
     try {

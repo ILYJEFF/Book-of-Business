@@ -1,16 +1,7 @@
 import { useApp } from '../context/AppContext'
 
 type NavItem = {
-  id:
-    | 'contacts'
-    | 'favorites'
-    | 'companies'
-    | 'tags'
-    | 'map'
-    | 'timezones'
-    | 'recruiting'
-    | 'industries'
-    | 'settings'
+  id: 'contacts' | 'favorites' | 'companies' | 'tags' | 'map' | 'timezones' | 'industries' | 'settings'
   label: string
   countKey?: 'contacts' | 'companies' | 'favorites' | 'tags' | 'map' | 'industries'
 }
@@ -22,7 +13,6 @@ const items: NavItem[] = [
   { id: 'tags', label: 'Tags', countKey: 'tags' },
   { id: 'map', label: 'Map', countKey: 'map' },
   { id: 'timezones', label: 'Time zones' },
-  { id: 'recruiting', label: 'Talent scout' },
   { id: 'industries', label: 'Industries', countKey: 'industries' },
   { id: 'settings', label: 'Library' }
 ]

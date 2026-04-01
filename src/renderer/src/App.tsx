@@ -9,7 +9,6 @@ import MapView from './views/MapView'
 import FavoritesView from './views/FavoritesView'
 import TagsView from './views/TagsView'
 import TimeZonesMapView from './views/TimeZonesMapView'
-import RecruitingView from './views/RecruitingView'
 
 function Shell(): React.ReactElement {
   const { workspacePath, section, loading } = useApp()
@@ -43,7 +42,6 @@ function Shell(): React.ReactElement {
           {section === 'industries' && <IndustriesView />}
           {section === 'map' && <MapView />}
           {section === 'timezones' && <TimeZonesMapView />}
-          {section === 'recruiting' && <RecruitingView />}
           {section === 'settings' && <SettingsView />}
         </div>
       </main>
