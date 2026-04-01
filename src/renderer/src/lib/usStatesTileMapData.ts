@@ -14,6 +14,60 @@ export type UsStateTile = {
   row: number
 }
 
+/** All 50 U.S. state postal abbreviations (module load checks completeness). */
+const US_FIFTY = new Set([
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'FL',
+  'GA',
+  'HI',
+  'ID',
+  'IL',
+  'IN',
+  'IA',
+  'KS',
+  'KY',
+  'LA',
+  'ME',
+  'MD',
+  'MA',
+  'MI',
+  'MN',
+  'MS',
+  'MO',
+  'MT',
+  'NE',
+  'NV',
+  'NH',
+  'NJ',
+  'NM',
+  'NY',
+  'NC',
+  'ND',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VT',
+  'VA',
+  'WA',
+  'WV',
+  'WI',
+  'WY'
+])
+
 export const US_STATE_TILES: UsStateTile[] = [
   { abbr: 'AK', name: 'Alaska', iana: 'America/Anchorage', col: 0, row: 0 },
   { abbr: 'ME', name: 'Maine', iana: 'America/New_York', col: 11, row: 0 },
@@ -66,6 +120,27 @@ export const US_STATE_TILES: UsStateTile[] = [
   { abbr: 'HI', name: 'Hawaii', iana: 'Pacific/Honolulu', col: 0, row: 7 },
   { abbr: 'FL', name: 'Florida', iana: 'America/New_York', col: 9, row: 8 }
 ]
+
+export const US_STATE_COUNT = US_STATE_TILES.length
+
+const _seenCells = new Set<string>()
+for (const t of US_STATE_TILES) {
+  if (!US_FIFTY.has(t.abbr)) {
+    throw new Error(`usStatesTileMapData: unknown or duplicate abbr in set check: ${t.abbr}`)
+  }
+  US_FIFTY.delete(t.abbr)
+  const cell = `${t.col},${t.row}`
+  if (_seenCells.has(cell)) {
+    throw new Error(`usStatesTileMapData: duplicate grid cell ${cell} for ${t.abbr}`)
+  }
+  _seenCells.add(cell)
+}
+if (US_FIFTY.size > 0) {
+  throw new Error(`usStatesTileMapData: missing states: ${[...US_FIFTY].sort().join(', ')}`)
+}
+if (US_STATE_TILES.length !== 50) {
+  throw new Error(`usStatesTileMapData: expected exactly 50 states, got ${US_STATE_TILES.length}`)
+}
 
 export function tileZoneClass(iana: string): string {
   if (iana.includes('Honolulu')) return 'tz-state-tile--hi'
