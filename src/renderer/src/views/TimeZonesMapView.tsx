@@ -1,17 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { US_STATE_TILES, tileZoneClass } from '../lib/usStatesTileMapData'
 
-const US_ZONE_STRIP: { iana: string; title: string; subtitle: string; bandClass: string }[] = [
-  { iana: 'America/Honolulu', title: 'Hawaii', subtitle: 'HST', bandClass: 'tz-map-band--pacific' },
-  { iana: 'America/Anchorage', title: 'Alaska', subtitle: 'AK', bandClass: 'tz-map-band--alaska' },
-  { iana: 'America/Los_Angeles', title: 'Pacific', subtitle: 'PT', bandClass: 'tz-map-band--pt' },
-  { iana: 'America/Denver', title: 'Mountain', subtitle: 'MT', bandClass: 'tz-map-band--mt' },
-  { iana: 'America/Phoenix', title: 'Arizona', subtitle: 'no DST', bandClass: 'tz-map-band--az' },
-  { iana: 'America/Chicago', title: 'Central', subtitle: 'CT', bandClass: 'tz-map-band--ct' },
-  { iana: 'America/New_York', title: 'Eastern', subtitle: 'ET', bandClass: 'tz-map-band--et' },
-  { iana: 'America/Puerto_Rico', title: 'Atlantic', subtitle: 'PR & VI', bandClass: 'tz-map-band--atl' }
-]
-
-function formatBandTime(iana: string, date: Date): { time: string; dateLine: string } {
+function formatStateClock(iana: string, date: Date): { time: string; day: string } {
   try {
     const time = new Intl.DateTimeFormat(undefined, {
       timeZone: iana,
@@ -19,15 +9,15 @@ function formatBandTime(iana: string, date: Date): { time: string; dateLine: str
       minute: '2-digit',
       second: '2-digit'
     }).format(date)
-    const dateLine = new Intl.DateTimeFormat(undefined, {
+    const day = new Intl.DateTimeFormat(undefined, {
       timeZone: iana,
       weekday: 'short',
       month: 'short',
       day: 'numeric'
     }).format(date)
-    return { time, dateLine }
+    return { time, day }
   } catch {
-    return { time: '?', dateLine: '' }
+    return { time: '?', day: '' }
   }
 }
 
@@ -51,35 +41,41 @@ export default function TimeZonesMapView(): React.ReactElement {
     <div className="tz-map-view">
       <header className="tz-map-view-header">
         <p className="folio-kicker">Reference</p>
-        <h1 className="tz-map-view-title">US time zones</h1>
+        <h1 className="tz-map-view-title">US state clocks</h1>
         <p className="tz-map-view-lead muted small">
-          Strip map of major US zones with live clocks. Your system reports <strong>{localLabel}</strong> as this device&apos;s
-          zone.
+          All fifty states on an equal-area tile map. Each clock uses the{' '}
+          <strong>capital city</strong> time zone. Your device reports <strong>{localLabel}</strong>.
         </p>
       </header>
 
-      <div className="tz-map-strip" role="list" aria-label="United States time zones west to east">
-        {US_ZONE_STRIP.map((z) => {
-          const { time, dateLine } = formatBandTime(z.iana, now)
-          return (
-            <article key={z.iana} className={`tz-map-band ${z.bandClass}`} role="listitem">
-              <div className="tz-map-band-top">
-                <span className="tz-map-band-title">{z.title}</span>
-                <span className="tz-map-band-sub muted">{z.subtitle}</span>
-              </div>
-              <time className="tz-map-band-time" dateTime={now.toISOString()}>
-                {time}
-              </time>
-              {dateLine ? <p className="tz-map-band-date muted small">{dateLine}</p> : null}
-              <p className="tz-map-band-iana small">{z.iana}</p>
-            </article>
-          )
-        })}
+      <div className="tz-state-map-scroll scroll-x">
+        <div className="tz-state-grid" role="list" aria-label="United States: local time by state">
+          {US_STATE_TILES.map((s) => {
+            const { time, day } = formatStateClock(s.iana, now)
+            const zc = tileZoneClass(s.iana)
+            return (
+              <article
+                key={s.abbr}
+                className={`tz-state-tile ${zc}`}
+                role="listitem"
+                style={{ gridColumn: s.col + 1, gridRow: s.row + 1 }}
+                title={`${s.name}: ${s.iana}`}
+              >
+                <span className="tz-state-abbr">{s.abbr}</span>
+                <span className="tz-state-name muted">{s.name}</span>
+                <time className="tz-state-time" dateTime={now.toISOString()}>
+                  {time}
+                </time>
+                {day ? <span className="tz-state-day muted">{day}</span> : null}
+              </article>
+            )
+          })}
+        </div>
       </div>
 
       <p className="muted small tz-map-footnote">
-        Boundaries on the ground are irregular; this is a quick visual, not legal or civic truth. Arizona and other
-        exceptions use real IANA ids above.
+        Idaho, Oregon, Florida, Texas, and others span more than one official zone. Here you see the capital&apos;s
+        zone only. Arizona (Phoenix) does not observe daylight saving time.
       </p>
     </div>
   )
