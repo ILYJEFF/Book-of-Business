@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { US_STATE_COUNT, US_STATE_TILES, tileZoneClass } from '../lib/usStatesTileMapData'
+import { US_STATE_COUNT, US_STATE_TILES } from '../lib/usStatesTileMapData'
 
 function formatStateClock(iana: string, date: Date): { time: string; day: string } {
   try {
@@ -23,6 +23,7 @@ function formatStateClock(iana: string, date: Date): { time: string; day: string
 
 export default function TimeZonesMapView(): React.ReactElement {
   const [now, setNow] = useState(() => new Date())
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000)
@@ -37,41 +38,66 @@ export default function TimeZonesMapView(): React.ReactElement {
     }
   }, [])
 
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const sorted = [...US_STATE_TILES].sort((a, b) => a.name.localeCompare(b.name))
+    if (!q) return sorted
+    return sorted.filter((s) => {
+      const blob = `${s.name} ${s.abbr} ${s.iana}`.toLowerCase()
+      return blob.includes(q)
+    })
+  }, [query])
+
   return (
     <div className="tz-map-view">
       <header className="tz-map-view-header">
         <p className="folio-kicker">Reference</p>
-        <h1 className="tz-map-view-title">US state clocks</h1>
+        <h1 className="tz-map-view-title">US time zones list</h1>
         <p className="tz-map-view-lead muted small">
-          <strong>{US_STATE_COUNT} states</strong> on an equal-area tile map. Each clock uses the{' '}
-          <strong>capital city</strong> time zone. Scroll vertically or horizontally if the grid is larger than your
-          pane. Your device reports <strong>{localLabel}</strong>.
+          Search all <strong>{US_STATE_COUNT} states</strong>. Each row shows the live local time for the state's
+          capital city zone. Your device reports <strong>{localLabel}</strong>.
         </p>
       </header>
 
-      <div className="tz-state-map-scroll scroll-x scroll-y">
-        <div className="tz-state-grid" role="list" aria-label="United States: local time by state">
-          {US_STATE_TILES.map((s) => {
-            const { time, day } = formatStateClock(s.iana, now)
-            const zc = tileZoneClass(s.iana)
-            return (
-              <article
-                key={s.abbr}
-                className={`tz-state-tile ${zc}`}
-                role="listitem"
-                style={{ gridColumn: s.col + 1, gridRow: s.row + 1 }}
-                title={`${s.name}: ${s.iana}`}
-              >
-                <span className="tz-state-abbr">{s.abbr}</span>
-                <span className="tz-state-name muted">{s.name}</span>
-                <time className="tz-state-time" dateTime={now.toISOString()}>
-                  {time}
-                </time>
-                {day ? <span className="tz-state-day muted">{day}</span> : null}
-              </article>
-            )
-          })}
-        </div>
+      <div className="tz-list-toolbar">
+        <input
+          type="search"
+          className="text-input focus-ring tz-list-search"
+          placeholder="Search state, code, or zone (e.g. Texas, TX, Chicago)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search time zone list"
+        />
+        <span className="muted small tz-list-count">
+          {rows.length} shown
+        </span>
+      </div>
+
+      <div className="tz-list-panel scroll-y" role="list" aria-label="United States time zones by state">
+        {rows.map((s) => {
+          const { time, day } = formatStateClock(s.iana, now)
+          return (
+            <article key={s.abbr} className="tz-list-row" role="listitem">
+              <div className="tz-list-state">
+                <span className="tz-list-abbr">{s.abbr}</span>
+                <span>{s.name}</span>
+              </div>
+              <time className="tz-list-time" dateTime={now.toISOString()}>
+                {time}
+              </time>
+              <div className="tz-list-meta muted">
+                <span>{day}</span>
+                <span>{s.iana}</span>
+              </div>
+            </article>
+          )
+        })}
+        {rows.length === 0 && (
+          <div className="list-empty tz-list-empty">
+            <p className="list-empty-title">No states match</p>
+            <p className="list-empty-text">Try a broader search term.</p>
+          </div>
+        )}
       </div>
 
       <p className="muted small tz-map-footnote">
